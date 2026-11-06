@@ -1,3 +1,4 @@
-node_modules/
-android/
 *.apk
+android/
+ios/
+node_modules/
