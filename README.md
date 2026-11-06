@@ -10,6 +10,7 @@ Kostenloser Ernährungs-Tracker mit Streaks, Vitaminen und Mineralstoffen, Rezep
 - Open Food Facts (Barcodes, Markenprodukte)
 - USDA FoodData Central (vollständige Mikronährstoffe)
 - Schweizer Nährwertdatenbank V 7.1, © Bundesamt für Lebensmittelsicherheit und Veterinärwesen (BLV), naehrwertdaten.ch
+- Bundeslebensmittelschlüssel BLS 4.0: Max Rubner-Institut (2025): Bundeslebensmittelschlüssel (BLS), Version 4.0 – Deutsche Nährstoffdatenbank. Karlsruhe. DOI: 10.25826/Data20251217-134202-0, Lizenz CC BY 4.0
 
 ## Aufbau
 - `www/index.html`: die komplette App in einer Datei
