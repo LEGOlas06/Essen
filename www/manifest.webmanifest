@@ -3,7 +3,7 @@
   "short_name": "Tellerflamme",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#140a2e",
-  "theme_color": "#ff1f8f",
+  "background_color": "#141122",
+  "theme_color": "#e0237f",
   "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
 }

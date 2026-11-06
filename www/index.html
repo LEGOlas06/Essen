@@ -3,35 +3,35 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#ff1f8f">
+<meta name="theme-color" content="#e0237f">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font-size:14px;font-family:system-ui,sans-serif}img{max-width:100%}</style>
 <title>Tellerflamme</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@500;700;800;900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;800;900&display=swap">
 <style>
-/* Layout: one-column phone app, sticky top bar, bottom tab bar. Look: neon comic, thick ink outlines, hard offset shadows, halftone paper */
+/* Layout: one-column phone app, sticky top bar, bottom tab bar. Look: bright and friendly, rounded type, soft cards, pink accent with a warm streak orange */
 :root{
-  --bg:#fff6cc; --dots:rgba(255,31,143,.16); --surface:#ffffff; --surface2:#f1e9ff; --ink:#140a26; --muted:#5a4a78; --line:#140a26; --edge:#140a26; --shadow:#140a26;
-  --accent:#ff1f8f; --accent-ink:#ffffff; --pop:#00d5ff; --zap:#ffe600; --flame:#ff5a00; --flame2:#ffd000; --ice:#00b8ff;
-  --prot:#00b3ff; --carb:#ffc400; --fat:#ff2e93; --fib:#3ddc2f;
-  --good:#22d052; --warn:#ffae00; --low:#ff3344;
-  --display:"Bangers", "Impact", "Arial Black", system-ui, sans-serif;
+  --bg:#f6f4fb; --dots:transparent; --surface:#ffffff; --surface2:#efebf8; --ink:#1c1530; --muted:#6b6283; --line:#e3ddf0; --edge:#e3ddf0; --shadow:rgba(46,24,96,.08);
+  --accent:#e0237f; --accent-ink:#ffffff; --pop:#1fb6e0; --zap:#ffd23f; --flame:#ff6a1f; --flame2:#ffb627; --ice:#2ea8e6;
+  --prot:#2f8fe0; --carb:#f0b324; --fat:#e8478f; --fib:#45b34a;
+  --good:#2fae5f; --warn:#e89a12; --low:#e5484d;
+  --display:"Fredoka", "Nunito", system-ui, sans-serif;
   --body:"Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --r:16px;
+  --r:18px;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#140a2e; --dots:rgba(0,213,255,.12); --surface:#22104a; --surface2:#341a66; --ink:#fff8ff; --muted:#c3b2ea; --line:#5d3ea3; --edge:#000000; --shadow:#ff1f8f;
-  --accent:#ff2e9a; --accent-ink:#ffffff; --pop:#22e4ff; --zap:#fff200; --flame:#ff6a1a; --flame2:#ffe000; --ice:#2ccaff;
-  --prot:#2cc4ff; --carb:#ffd21f; --fat:#ff4fa8; --fib:#5cff45;
-  --good:#3dff7a; --warn:#ffc21a; --low:#ff4d5e; color-scheme:dark}}
+  --bg:#141122; --dots:transparent; --surface:#1e1932; --surface2:#2a2443; --ink:#f3effc; --muted:#a79fc0; --line:#332c4f; --edge:#332c4f; --shadow:rgba(0,0,0,.35);
+  --accent:#ff4d9d; --accent-ink:#ffffff; --pop:#45cdf2; --zap:#ffd84d; --flame:#ff7a33; --flame2:#ffc23d; --ice:#4cbaf0;
+  --prot:#5aa9f0; --carb:#f5c23d; --fat:#f06aa5; --fib:#62c766;
+  --good:#4fcf7e; --warn:#f2b13a; --low:#f2676b; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#140a2e; --dots:rgba(0,213,255,.12); --surface:#22104a; --surface2:#341a66; --ink:#fff8ff; --muted:#c3b2ea; --line:#5d3ea3; --edge:#000000; --shadow:#ff1f8f;
-  --accent:#ff2e9a; --accent-ink:#ffffff; --pop:#22e4ff; --zap:#fff200; --flame:#ff6a1a; --flame2:#ffe000; --ice:#2ccaff;
-  --prot:#2cc4ff; --carb:#ffd21f; --fat:#ff4fa8; --fib:#5cff45;
-  --good:#3dff7a; --warn:#ffc21a; --low:#ff4d5e; color-scheme:dark}
+  --bg:#141122; --dots:transparent; --surface:#1e1932; --surface2:#2a2443; --ink:#f3effc; --muted:#a79fc0; --line:#332c4f; --edge:#332c4f; --shadow:rgba(0,0,0,.35);
+  --accent:#ff4d9d; --accent-ink:#ffffff; --pop:#45cdf2; --zap:#ffd84d; --flame:#ff7a33; --flame2:#ffc23d; --ice:#4cbaf0;
+  --prot:#5aa9f0; --carb:#f5c23d; --fat:#f06aa5; --fib:#62c766;
+  --good:#4fcf7e; --warn:#f2b13a; --low:#f2676b; color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{background:var(--bg)}
@@ -96,7 +96,8 @@ textarea{resize:vertical}
 .entry .grow div:first-child{font-weight:600;overflow-wrap:anywhere}
 .micro{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px}
 .mi .l{display:flex;justify-content:space-between;font-size:12.5px;gap:6px;margin-bottom:3px}
-.mi .l span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mi .l span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.mi .l span:last-child{white-space:nowrap}
 .seg{display:flex;background:var(--surface2);border-radius:10px;padding:3px;gap:3px}
 .seg button{flex:1;border:0;background:transparent;padding:7px 6px;font-size:13px;border-radius:8px}
 .seg button.on{background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.12)}
@@ -144,56 +145,50 @@ ol.steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
 @media (max-width:380px){.sum{grid-template-columns:1fr;justify-items:center}.mac{width:100%}.micro{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:no-preference){.flamebig.lit svg{animation:flick 2.4s ease-in-out infinite;transform-origin:50% 90%}@keyframes flick{0%,100%{transform:scale(1)}50%{transform:scale(1.05,.97)}}}
 
-/* ---- Neon-Comic ---- */
-html,body{background-color:var(--bg);background-image:radial-gradient(var(--dots) 1.3px,transparent 1.5px);background-size:14px 14px}
+/* ---- Look ---- */
 body{font-weight:500}
-header.top{background:transparent;backdrop-filter:blur(6px)}
-body::before{background:var(--bg)}
-.brand{font-family:var(--display);font-weight:400;font-size:32px;letter-spacing:.04em;color:var(--accent);text-shadow:2px 2px 0 var(--edge),3px 3px 0 var(--pop)}
-.brand svg{width:28px;height:28px;filter:drop-shadow(2px 2px 0 var(--edge))}
-h2{font-family:var(--display);font-weight:400;font-size:28px;letter-spacing:.04em;line-height:1}
-h3{font-family:var(--body);font-weight:900;font-size:17px}
-.label{color:var(--accent);font-weight:900}
-.card{border:2.5px solid var(--edge);box-shadow:5px 5px 0 var(--shadow);border-radius:var(--r)}
-button,.btn{border:2.5px solid var(--edge);box-shadow:3px 3px 0 var(--shadow);font-weight:800;transition:transform .06s,box-shadow .06s}
-button:hover{border-color:var(--edge);transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--shadow)}
-button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--shadow)}
-button.primary{background:var(--accent);border-color:var(--edge);color:var(--accent-ink);text-shadow:1px 1px 0 var(--edge)}
-button.ghost,.item,nav.tabs button,.seg button{box-shadow:none;border-color:transparent}
-button.ghost:hover,.item:hover,nav.tabs button:hover,.seg button:hover{transform:none;box-shadow:none}
-.item{border-top:2px dashed var(--line)}
-.item:hover{background:color-mix(in srgb,var(--zap) 18%,transparent)}
-input,select,textarea{border:2.5px solid var(--edge);font-weight:700}
-.chip-streak{border:2.5px solid var(--edge);box-shadow:3px 3px 0 var(--shadow);background:var(--zap);color:#140a26;font-weight:900}
-.progress{height:13px;border:2px solid var(--edge);background:var(--surface2)}
-.progress>i{border-radius:0;border-right:2px solid var(--edge)}
-.streak .count,.ring .c b,.kc[style*="display"],b.num[style*="display"]{font-family:var(--display);font-weight:400;letter-spacing:.03em}
-.streak .count{font-size:52px;color:var(--flame);text-shadow:2px 2px 0 var(--edge)}
-.flamebig svg{filter:drop-shadow(3px 3px 0 var(--edge))}
-.dot{border:2.5px solid var(--edge);width:30px;height:30px}
-.dot.today{border-style:dashed;border-color:var(--flame)}
-.ring .c b{font-size:34px}
-.ring svg circle:first-child{stroke:var(--surface2)}
-.seg{border:2.5px solid var(--edge);background:var(--surface);box-shadow:3px 3px 0 var(--shadow)}
-.seg button.on{background:var(--zap);color:#140a26;box-shadow:none;border:2px solid var(--edge)}
-nav.tabs{border-top:3px solid var(--edge)}
+header.top{background:var(--bg)}
+.brand{font-family:var(--display);font-weight:700;font-size:25px;letter-spacing:0;color:var(--accent)}
+.brand svg{width:24px;height:24px}
+h2{font-family:var(--display);font-weight:600;font-size:23px;letter-spacing:0;line-height:1.1}
+h3{font-family:var(--body);font-weight:800;font-size:16px}
+.label{color:var(--accent);font-weight:800}
+.card{border:1px solid var(--line);box-shadow:0 4px 16px var(--shadow);border-radius:var(--r)}
+button,.btn{border:1.5px solid var(--line);font-weight:800;border-radius:12px;transition:transform .08s,background .15s}
+button:hover{border-color:var(--muted)}
+button:active{transform:scale(.97)}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.ghost,.item,nav.tabs button,.seg button{border-color:transparent}
+.item{border-top:1px solid var(--line)}
+.item:hover{background:color-mix(in srgb,var(--accent) 6%,transparent)}
+input,select,textarea{border:1.5px solid var(--line);font-weight:600;border-radius:12px}
+.chip-streak{border:0;background:color-mix(in srgb,var(--flame) 16%,var(--surface));color:var(--flame);font-weight:900}
+.progress{height:10px;background:var(--surface2)}
+.streak .count,.ring .c b,.kc[style*="display"],b.num[style*="display"]{font-family:var(--display);font-weight:700}
+.streak .count{font-size:42px;color:var(--flame)}
+.dot{width:28px;height:28px;border:2px solid var(--line)}
+.ring .c b{font-size:28px}
+.seg{border:0;background:var(--surface2)}
+.seg button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px var(--shadow)}
+nav.tabs{border-top:1px solid var(--line);box-shadow:0 -4px 16px var(--shadow)}
 nav.tabs button.on{color:var(--accent)}
-nav.tabs button.add svg{background:var(--accent);border:2.5px solid var(--edge);box-shadow:2px 2px 0 var(--shadow);width:38px;height:38px;padding:5px;color:#fff}
-.tag{border:2px solid var(--edge);font-weight:900;color:#140a26;background:var(--surface2)}
-.tag.own{background:var(--pop);color:#140a26}
-.tag.empf{background:var(--zap);color:#140a26}
-.tag.ai{background:var(--accent);color:#fff}
-.note{border:2px dashed var(--edge);background:color-mix(in srgb,var(--zap) 22%,var(--surface))}
-.sheet{border-top:3px solid var(--edge);background-color:var(--bg);background-image:radial-gradient(var(--dots) 1.3px,transparent 1.5px);background-size:14px 14px}
-.sheet-bg{background:rgba(20,10,38,.6)}
-.toast{background:var(--zap);color:#140a26;border:2.5px solid #140a26;box-shadow:4px 4px 0 #140a26;font-weight:900}
-.badge.got .b{background:linear-gradient(160deg,var(--zap),var(--flame));border:2.5px solid var(--edge);color:#140a26;box-shadow:2px 2px 0 var(--shadow)}
-.badge .b{font-family:var(--display);font-weight:400;font-size:20px}
-.heat i{border:1.5px solid var(--line)}
-.heat i.on{background:var(--flame);border-color:var(--edge)}
-.kv span{font-weight:600}
-@keyframes pop{0%{transform:scale(.6) rotate(-8deg)}70%{transform:scale(1.15) rotate(3deg)}100%{transform:scale(1)}}
-@media (prefers-reduced-motion:no-preference){.toast{animation:pop .28s ease-out}}
+nav.tabs button.add svg{background:var(--accent);width:36px;height:36px;padding:5px;color:#fff;box-shadow:0 3px 10px color-mix(in srgb,var(--accent) 45%,transparent)}
+.tag{border:0;font-weight:800}
+.tag.own{background:color-mix(in srgb,var(--pop) 18%,transparent);color:color-mix(in srgb,var(--pop) 70%,var(--ink))}
+.tag.empf{background:color-mix(in srgb,var(--zap) 35%,transparent);color:color-mix(in srgb,var(--warn) 75%,var(--ink))}
+.tag.ai{background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent)}
+.note{border:0;background:var(--surface2)}
+.sheet{border-top:0;background:var(--bg)}
+.sheet-bg{background:rgba(20,12,40,.45)}
+.toast{background:var(--ink);color:var(--bg);border:0;font-weight:800}
+.badge.got .b{background:linear-gradient(160deg,var(--flame2),var(--flame));border:0;color:#fff}
+.badge .b{font-family:var(--display);font-weight:700;font-size:16px}
+.heat i.on{background:var(--flame)}
+.hc{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.hc div{background:var(--surface2);border-radius:12px;padding:10px;text-align:center}
+.hc b{display:block;font-family:var(--display);font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+@keyframes pop{0%{transform:translateX(-50%) scale(.85);opacity:0}100%{transform:translateX(-50%) scale(1);opacity:1}}
+@media (prefers-reduced-motion:no-preference){.toast{animation:pop .2s ease-out}}
 </style>
 
 </head>
@@ -462,6 +457,7 @@ function render(){
   v.innerHTML=({heute:vHeute,add:vAdd,rezepte:vRezepte,statistik:vStats,mehr:vMehr})[UI.tab](si);
   if(UI.tab==='add'){const i=document.getElementById('q'); if(i&&UI.focusQ){i.focus();i.setSelectionRange(i.value.length,i.value.length);UI.focusQ=false}}
 }
+function bodyInputs(bd){return `<div class="field"><label for="b-burn">Aktivkalorien</label><input id="b-burn" type="number" inputmode="numeric" min="0" placeholder="kcal" value="${bd.burn??''}"></div><div class="field"><label for="b-w">Gewicht</label><input id="b-w" type="number" inputmode="decimal" step="0.1" min="0" placeholder="kg" value="${bd.w??''}"></div>`}
 function bar(p,color){return `<div class="progress"><i style="width:${Math.min(100,Math.max(0,p))}%;background:${color}"></i></div>`}
 function microColor(p){return p>=100?'var(--good)':p>=60?'var(--warn)':'var(--low)'}
 
@@ -476,7 +472,7 @@ function streakCard(si){
   <div class="small muted">${esc(msg)}</div></div></div>
   <div class="week">${w}</div>
   <div class="row small" style="margin-top:12px;justify-content:space-between"><span class="muted">Nächstes Abzeichen: <b style="color:var(--ink)">${next} Tage</b></span><span class="muted">Freezes: <b style="color:var(--ice)">${si.freezes}/2</b></span></div>
-  <div style="margin-top:6px">${bar((si.cur-prev)/(next-prev)*100,'repeating-linear-gradient(-45deg,var(--flame) 0 8px,var(--flame2) 8px 16px)')}</div></section>`;
+  <div style="margin-top:6px">${bar((si.cur-prev)/(next-prev)*100,'linear-gradient(90deg,var(--flame2),var(--flame))')}</div></section>`;
 }
 function vHeute(si){
   const d=UI.date, t=dayTotals(d), g=S.settings, goal=dayGoal(d), bd=S.body[d]||{};
@@ -499,9 +495,11 @@ function vHeute(si){
     <div class="mac">${macro('prot','Eiweiß','var(--prot)',g.prot)}${macro('carb','Kohlenhydrate','var(--carb)',g.carb)}${macro('fat','Fett','var(--fat)',g.fat)}${macro('fib','Ballaststoffe','var(--fib)',g.fib)}</div>
   </div></section>
   <section class="card">${meals}</section>
-  <section class="card stack" style="gap:10px"><div class="row" style="justify-content:space-between"><h3>Verbrauch &amp; Gewicht</h3>${g.useBurn&&bd.burn?`<span class="tiny muted">+${Math.round(bd.burn*g.burnFactor)} kcal aufs Ziel</span>`:''}</div>
-   <div class="grid2"><div class="field"><label for="b-burn">Aktivkalorien (Uhr/Handy)</label><input id="b-burn" type="number" inputmode="numeric" min="0" placeholder="kcal" value="${bd.burn??''}"></div>
-   <div class="field"><label for="b-w">Gewicht</label><input id="b-w" type="number" inputmode="decimal" step="0.1" min="0" placeholder="kg" value="${bd.w??''}"></div></div>
+  <section class="card stack" style="gap:10px"><div class="row" style="justify-content:space-between"><h3>Aktivität &amp; Gewicht</h3>${g.useBurn&&bd.burn?`<span class="tiny muted">+${Math.round(bd.burn*g.burnFactor)} kcal aufs Ziel</span>`:''}</div>
+   ${g.hcSync||bd.hc?`<div class="hc"><div><span class="tiny muted">Aktivkalorien</span><b>${bd.burn!=null?bd.burn:'–'}</b><span class="tiny muted">kcal</span></div><div><span class="tiny muted">Schritte</span><b>${bd.steps!=null?bd.steps.toLocaleString('de-DE'):'–'}</b><span class="tiny muted">heute</span></div><div><span class="tiny muted">Gewicht</span><b>${bd.w!=null?fmt(bd.w):'–'}</b><span class="tiny muted">kg</span></div></div>
+   <div class="row" style="justify-content:space-between"><span class="tiny muted">Aus Health Connect${g.hcLast?' · Stand '+new Date(g.hcLast).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):''}</span>${nativeHealth()?'<button class="sm" data-act="hc">Aktualisieren</button>':''}</div>
+   <details><summary class="small">Von Hand ändern</summary><div class="grid2" style="margin-top:8px">${bodyInputs(bd)}</div></details>`
+   :`<div class="grid2">${bodyInputs(bd)}</div>${nativeHealth()?'<button class="sm" data-act="hc">Mit Health Connect verbinden</button>':''}`}
    ${g.useBurn?'':'<div class="tiny muted">Aktivkalorien zählen erst zum Ziel, wenn du das unter „Ziele“ einschaltest.</div>'}
   </section>
   <section class="card stack" style="gap:10px"><div class="row" style="justify-content:space-between"><h2>Vitamine &amp; Mineralstoffe</h2><span class="tiny muted" style="white-space:nowrap">% vom Bedarf</span></div>
@@ -766,6 +764,7 @@ function vStats(si){
     <div class="card"><div class="label">Im Ziel</div><div class="kc" style="font-size:22px;font-family:var(--display)">${inGoal}</div><div class="tiny muted">Tage ±10 %</div></div>
     <div class="card"><div class="label">Bester</div><div class="kc" style="font-size:22px;font-family:var(--display)">${si.best}</div><div class="tiny muted">Tage Streak</div></div>
   </div>
+  ${activityCard(days)}
   ${adaptiveCard()}
   <section class="card stack" style="gap:8px"><h3>Kalorien pro Tag</h3><div class="chart">${svg}</div></section>
   <section class="card stack" style="gap:10px"><h3>Ø Makros pro geloggtem Tag</h3><div class="mac">
@@ -785,6 +784,16 @@ function vStats(si){
   </div>`;
 }
 
+function activityCard(days){const bs=days.map(d=>S.body[d]||{}); const bd=bs.filter(b=>b.burn!=null), sd=bs.filter(b=>b.steps!=null), wd=days.filter(d=>S.body[d]&&S.body[d].w);
+  if(!bd.length&&!sd.length&&!wd.length)return '';
+  const avgB=bd.length?Math.round(bd.reduce((a,b)=>a+b.burn,0)/bd.length):null, avgS=sd.length?Math.round(sd.reduce((a,b)=>a+b.steps,0)/sd.length):null;
+  const w0=wd.length?S.body[wd[0]].w:null, w1=wd.length?S.body[wd[wd.length-1]].w:null;
+  const W=520,H=90,pl=4; const mx=Math.max(1,...bs.map(b=>b.burn||0)); const bw=(W-pl)/days.length; let svg=`<svg viewBox="0 0 ${W} ${H+16}" role="img" aria-label="Aktivkalorien pro Tag">`;
+  bs.forEach((b,i)=>{if(b.burn){const h=H*b.burn/mx; svg+=`<rect x="${pl+i*bw+bw*.15}" y="${H-h}" width="${Math.max(1,bw*.7)}" height="${h}" rx="2" fill="var(--flame)"><title>${fmtDate(days[i])}: ${b.burn} kcal aktiv${b.steps?', '+b.steps+' Schritte':''}</title></rect>`}});
+  svg+=`<line x1="0" x2="${W}" y1="${H}" y2="${H}" stroke="var(--line)"/><text x="${W}" y="${H+13}" text-anchor="end" font-size="10" fill="var(--muted)">max. ${mx} kcal</text></svg>`;
+  return `<section class="card stack" style="gap:10px"><h3>Aktivität${S.settings.hcSync?' (Health Connect)':''}</h3>
+   <div class="hc"><div><span class="tiny muted">Ø Aktivkalorien</span><b>${avgB??'–'}</b></div><div><span class="tiny muted">Ø Schritte</span><b>${avgS!=null?avgS.toLocaleString('de-DE'):'–'}</b></div><div><span class="tiny muted">Gewicht</span><b>${w1!=null?fmt(w1):'–'}</b><span class="tiny muted">${w0!=null&&wd.length>1?(w1-w0>=0?'+':'')+fmt(w1-w0)+' kg':''}</span></div></div>
+   ${bd.length?`<div class="chart">${svg}</div>`:''}</section>`}
 function adaptiveCard(){const a=adaptive(); const g=S.settings;
   if(!a.ok)return `<section class="card stack" style="gap:6px"><h3>Dein echter Verbrauch</h3><div class="small muted">Sobald du 14 Tage gegessen und mindestens 4-mal über 2 Wochen dein Gewicht eingetragen hast, rechnet die App aus Essen und Gewichtsverlauf deinen tatsächlichen Verbrauch aus. Bisher: ${a.logged} von 14 Tagen, ${a.ws} Gewichtswerte.</div></section>`;
   const adj=goalAdj(a.tdee,g); const target=Math.round((a.tdee+adj)/10)*10; const wk=a.slope*7;
@@ -798,8 +807,8 @@ const dec=v=>String(Math.round(v*100)/100).replace('.',',');
 function csvCell(s){s=String(s??'');return /[;"\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s}
 function csvEntries(){const head=['Datum','Mahlzeit','Lebensmittel','Menge','Einheit',...NK.map(k=>NI[k][0]+' ('+NI[k][1]+')')];const rows=[head.join(';')];
   Object.keys(S.days).sort().forEach(d=>S.days[d].forEach(e=>rows.push([d,MEALS.find(m=>m[0]===e.meal)?.[1]||'',csvCell(e.name),dec(e.amt),e.unit,...e.n.map(dec)].join(';'))));return rows.join('\r\n')}
-function csvDays(){const head=['Datum','Einträge',...NK.map(k=>NI[k][0]+' ('+NI[k][1]+')'),'kcal-Ziel','Aktivkalorien','Gewicht (kg)'];const rows=[head.join(';')];
-  Object.keys(S.days).sort().forEach(d=>{if(!S.days[d].length)return; rows.push([d,S.days[d].length,...dayTotals(d).map(dec),dayGoal(d),S.body[d]&&S.body[d].burn!=null?S.body[d].burn:'',S.body[d]&&S.body[d].w?dec(S.body[d].w):''].join(';'))});return rows.join('\r\n')}
+function csvDays(){const head=['Datum','Einträge',...NK.map(k=>NI[k][0]+' ('+NI[k][1]+')'),'kcal-Ziel','Aktivkalorien','Schritte','Gewicht (kg)'];const rows=[head.join(';')];
+  Object.keys(S.days).sort().forEach(d=>{if(!S.days[d].length)return; rows.push([d,S.days[d].length,...dayTotals(d).map(dec),dayGoal(d),S.body[d]&&S.body[d].burn!=null?S.body[d].burn:'',S.body[d]&&S.body[d].steps!=null?S.body[d].steps:'',S.body[d]&&S.body[d].w?dec(S.body[d].w):''].join(';'))});return rows.join('\r\n')}
 async function saveFile(name,text,mime){
   if(Store.dl){try{await Store.dl.save({filename:name,data:new Blob([text],{type:mime})});toast('Gespeichert: '+name)}catch(e){if(e&&e.code!=='declined')toast('Download nicht möglich: '+(e.message||e.code))}return}
   try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:mime}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}catch(e){toast('Download nicht möglich')}
@@ -810,7 +819,7 @@ function summaryText(){
   const si=streakInfo();
   let s=`Meine Ernährungsdaten aus Tellerflamme (letzte 30 Tage, ${days.length} Tage mit Einträgen). Bitte werte sie aus und gib mir konkrete Tipps.\nZiele: ${g.kcal} kcal, ${g.prot} g Eiweiß, ${g.carb} g KH, ${g.fat} g Fett, ${g.fib} g Ballaststoffe. Streak: ${si.cur} Tage (bester ${si.best}).\nProfil: ${g.age||'?'} Jahre, ${g.height||'?'} cm, ${g.weight||'?'} kg, Ziel: ${g.goal==='lose'?'abnehmen':g.goal==='gain'?'Muskeln aufbauen':'halten'}${g.strength?', Krafttraining':''}.\n\nDurchschnitt pro Tag:\n`;
   NK.forEach(k=>{s+=`- ${NI[k][0]}: ${fmt(avg[IDX[k]],k)} ${NI[k][1]}${ref[k]?` (${Math.round(avg[IDX[k]]/ref[k]*100)} % vom Bedarf)`:''}\n`});
-  s+='\nTage:\n'; days.slice(-14).forEach(d=>{const t=dayTotals(d); const b=S.body[d]||{}; s+=`${d}: ${Math.round(t[0])} kcal${b.burn?' (aktiv verbrannt '+b.burn+')':''}${b.w?' [Gewicht '+fmt(b.w)+' kg]':''}, E ${fmt(t[1])} g, K ${fmt(t[2])} g, F ${fmt(t[4])} g – ${S.days[d].map(e=>e.name+' '+fmt(e.amt)+' '+e.unit).join(', ')}\n`});
+  s+='\nTage:\n'; days.slice(-14).forEach(d=>{const t=dayTotals(d); const b=S.body[d]||{}; s+=`${d}: ${Math.round(t[0])} kcal${b.burn?' (aktiv verbrannt '+b.burn+')':''}${b.steps?' ['+b.steps+' Schritte]':''}${b.w?' [Gewicht '+fmt(b.w)+' kg]':''}, E ${fmt(t[1])} g, K ${fmt(t[2])} g, F ${fmt(t[4])} g – ${S.days[d].map(e=>e.name+' '+fmt(e.amt)+' '+e.unit).join(', ')}\n`});
   return s;
 }
 async function copySummary(){const t=summaryText(); try{await navigator.clipboard.writeText(t);toast('Kopiert. Jetzt im Chat einfügen.')}catch(e){openSheet(`<div class="stack"><h2>Zusammenfassung</h2><div class="small muted">Kopieren klappt hier nicht automatisch. Markiere den Text und kopiere ihn.</div><textarea rows="12" id="sumtxt" readonly>${esc(t)}</textarea><button data-act="close">Schließen</button></div>`);setTimeout(()=>document.getElementById('sumtxt')?.select(),50)}}
@@ -833,7 +842,7 @@ function calcGoals(p){const w=+p.weight,h=+p.height,a=+p.age; if(!(w>0&&h>0&&a>0
   return {bmr,pal,tdee,adj,kcal,floor,...macrosFor(kcal,p)}}
 function adaptive(){const days=rangeDays(28); const ws=days.map((d,i)=>[i,S.body[d]&&S.body[d].w]).filter(x=>x[1]>0); const logged=days.filter(d=>S.days[d]&&S.days[d].length);
   const span=ws.length?ws[ws.length-1][0]-ws[0][0]:0;
-  if(ws.length<4||logged.length<14||span<14)return {ok:false,ws:ws.length,logged:logged.length,span};
+  if(ws.length<4||logged.length<14||span<13)return {ok:false,ws:ws.length,logged:logged.length,span};
   const mx=ws.reduce((a,x)=>a+x[0],0)/ws.length, my=ws.reduce((a,x)=>a+x[1],0)/ws.length;
   const slope=ws.reduce((a,x)=>a+(x[0]-mx)*(x[1]-my),0)/ws.reduce((a,x)=>a+(x[0]-mx)**2,0);
   const intake=logged.reduce((a,d)=>a+dayTotals(d)[0],0)/logged.length; const tdee=intake-slope*7700;
@@ -874,12 +883,14 @@ let hcBusy=false;
 async function syncHealth(interactive){
   const H=nativeHealth(); if(!H||hcBusy)return; hcBusy=true;
   try{const av=await H.isHealthAvailable(); if(!av.available){if(interactive){toast('Health Connect ist nicht installiert.');try{await H.showHealthConnectInPlayStore()}catch(e){}}return}
-    if(interactive)await H.requestHealthPermissions({permissions:['READ_ACTIVE_CALORIES','READ_WEIGHT']});
+    if(interactive)await H.requestHealthPermissions({permissions:['READ_ACTIVE_CALORIES','READ_STEPS','READ_WEIGHT']});
     const end=new Date(), start=new Date(); start.setDate(start.getDate()-29); start.setHours(0,0,0,0);
     const {aggregatedData}=await H.queryAggregated({startDate:start.toISOString(),endDate:end.toISOString(),dataType:'active-calories',bucket:'day'});
-    (aggregatedData||[]).forEach(x=>{const d=ymd(new Date(x.startDate)); if(x.value>0)(S.body[d]=S.body[d]||{}).burn=Math.round(x.value)});
+    (aggregatedData||[]).forEach(x=>{const d=ymd(new Date(x.startDate)); if(x.value>0){const b=(S.body[d]=S.body[d]||{}); b.burn=Math.round(x.value); b.hc=1}});
+    try{const st=await H.queryAggregated({startDate:start.toISOString(),endDate:end.toISOString(),dataType:'steps',bucket:'day'});
+      (st.aggregatedData||[]).forEach(x=>{const d=ymd(new Date(x.startDate)); if(x.value>0){const b=(S.body[d]=S.body[d]||{}); b.steps=Math.round(x.value); b.hc=1}})}catch(e){}
     try{const {records}=await H.queryRecords({startDate:start.toISOString(),endDate:end.toISOString(),dataType:'weight'});
-      (records||[]).forEach(r=>{const d=ymd(new Date(r.startDate)); (S.body[d]=S.body[d]||{}).w=Math.round(r.value*10)/10});
+      (records||[]).forEach(r=>{const d=ymd(new Date(r.startDate)); const b=(S.body[d]=S.body[d]||{}); b.w=Math.round(r.value*10)/10; b.hc=1});
       const last=(records||[]).slice(-1)[0]; if(last)S.settings.weight=Math.round(last.value*10)/10}catch(e){}
     if(interactive&&!S.settings.hcSync)S.settings.useBurn=true;
     S.settings.hcSync=true; S.settings.hcLast=Date.now(); await Store.saveMeta(); render(); if(interactive)toast('Health Connect synchronisiert');

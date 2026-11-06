@@ -24,13 +24,13 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="4dp"
             android:text="0"
-            android:textColor="#FFE600"
+            android:textColor="#FFFFFF"
             android:textSize="38sp"
             android:textStyle="bold"
-            android:shadowColor="#140A26"
-            android:shadowDx="3"
-            android:shadowDy="3"
-            android:shadowRadius="0.1" />
+            android:shadowColor="#55000000"
+            android:shadowDx="0"
+            android:shadowDy="1"
+            android:shadowRadius="3" />
     </LinearLayout>
 
     <TextView
@@ -43,10 +43,10 @@
         android:textColor="#FFFFFF"
         android:textSize="15sp"
         android:textStyle="bold"
-        android:shadowColor="#140A26"
-        android:shadowDx="2"
-        android:shadowDy="2"
-        android:shadowRadius="0.1" />
+        android:shadowColor="#55000000"
+        android:shadowDx="0"
+        android:shadowDy="1"
+        android:shadowRadius="3" />
 
     <ImageView
         android:id="@+id/w_mascot"
