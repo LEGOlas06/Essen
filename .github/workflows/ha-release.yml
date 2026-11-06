@@ -1,0 +1,31 @@
+name: Home-Assistant-Erweiterung veröffentlichen
+
+on:
+  push:
+    branches: [main]
+    paths: ['custom_components/**', 'hacs.json', '.github/workflows/ha-release.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Version aus manifest.json lesen
+        id: v
+        run: echo "version=$(jq -r .version custom_components/tellerflamme/manifest.json)" >> "$GITHUB_OUTPUT"
+      - name: Release für HACS anlegen (nur wenn es die Version noch nicht gibt)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ha-v${{ steps.v.outputs.version }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "$TAG gibt es schon. Für ein Update die Version in manifest.json erhöhen."
+          else
+            gh release create "$TAG" --target "$GITHUB_SHA" --latest \
+              --title "Tellerflamme für Home Assistant $TAG" \
+              --notes "Home-Assistant-Erweiterung Tellerflamme. Installation über HACS, siehe homeassistant/README.md."
+          fi
