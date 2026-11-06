@@ -80,6 +80,7 @@ textarea{resize:vertical}
 .dot svg{width:14px;height:14px}
 .progress{height:8px;border-radius:99px;background:var(--surface2);overflow:hidden}
 .progress>i{display:block;height:100%;border-radius:99px;background:var(--accent)}
+.progress.rg{position:relative}.progress.rg>b{position:absolute;top:0;bottom:0;border-radius:99px;opacity:.28}.progress.rg>i{position:relative}
 /* summary */
 .sum{display:grid;grid-template-columns:120px 1fr;gap:16px;align-items:center}
 .ring{position:relative;width:120px;height:120px}
@@ -486,6 +487,7 @@ function waterCard(d){const w=(S.body[d]&&S.body[d].water)||0, total=S.settings.
    ${fw?`<div class="tiny muted">Aus dem Essen schon ca. ${fw.toLocaleString('de-DE')} ml Wasser, deshalb ${(g/1000).toFixed(2).replace('.',',')} statt ${(total/1000).toFixed(1).replace('.',',')} l zu trinken. ${w+fw>=total?'Gesamt geschafft!':'Noch '+Math.max(0,g-w).toLocaleString('de-DE')+' ml.'}</div>`:''}
    <div class="row wrapr"><button class="sm" data-act="water" data-ml="250">+ Glas 250 ml</button><button class="sm" data-act="water" data-ml="500">+ Flasche 500 ml</button><button class="sm" data-act="water" data-ml="-250" ${w?'':'disabled'} aria-label="250 ml abziehen">− 250</button></div></section>`}
 function bodyInputs(bd){return `<div class="field"><label for="b-burn">Aktivkalorien</label><input id="b-burn" type="number" inputmode="numeric" min="0" placeholder="kcal" value="${bd.burn??''}"></div><div class="field"><label for="b-w">Gewicht</label><input id="b-w" type="number" inputmode="decimal" step="0.1" min="0" placeholder="kg" value="${bd.w??''}"></div>`}
+function barR(p,lo,hi,color){const c=v=>Math.min(100,Math.max(0,v)); return `<div class="progress rg" title="Geschätzte Spanne"><b style="left:${c(lo)}%;width:${Math.max(1.5,c(hi)-c(lo))}%;background:${color}"></b><i style="width:${c(p)}%;background:${color}"></i></div>`}
 function bar(p,color){return `<div class="progress"><i style="width:${Math.min(100,Math.max(0,p))}%;background:${color}"></i></div>`}
 function microColor(p){return p>=100?'var(--good)':p>=60?'var(--warn)':'var(--low)'}
 
@@ -513,7 +515,7 @@ function vHeute(si){
     ${es.map(e=>`<div class="entry"><div class="grow"><div>${esc(e.name)}</div><div class="pfc">${entryTime(e,d)?entryTime(e,d)+' Uhr · ':''}${fmt(e.amt)} ${esc(e.unit)} · E ${fmt(e.n[1])} · K ${fmt(e.n[2])} · F ${fmt(e.n[4])}</div></div><span class="kc">${Math.round(e.n[0])}</span><button class="ghost" data-act="delentry" data-id="${e.id}" aria-label="Eintrag löschen">✕</button></div>`).join('')}</div>`}).join('');
   const ref=REF[g.sex];
   const hasR=entries.some(e=>e.rng); const rl=MICRO.map((k,j)=>entries.reduce((s,e)=>s+(e.rng?e.rng[0][j]:e.n[IDX[k]]),0)), rh=MICRO.map((k,j)=>entries.reduce((s,e)=>s+(e.rng?e.rng[1][j]:e.n[IDX[k]]),0));
-  const micro=MICRO.map((k,j)=>{const p=t[IDX[k]]/ref[k]*100; const rg=hasR&&rh[j]-rl[j]>t[IDX[k]]*0.02; return `<div class="mi"><div class="l"><span>${NI[k][0]}</span><span class="num muted">${fmt(t[IDX[k]])} ${NI[k][1]} · ${Math.round(p)} %</span></div>${bar(p,microColor(p))}${rg?`<div class="tiny muted" style="white-space:nowrap">≈ ${fmt(rl[j])}–${fmt(rh[j])} ${NI[k][1]}</div>`:''}</div>`}).join('');
+  const micro=MICRO.map((k,j)=>{const p=t[IDX[k]]/ref[k]*100; const rg=hasR&&rh[j]-rl[j]>t[IDX[k]]*0.02; return `<div class="mi"><div class="l"><span>${NI[k][0]}</span><span class="num muted">${fmt(t[IDX[k]])} ${NI[k][1]} · ${Math.round(p)} %</span></div>${rg?barR(p,rl[j]/ref[k]*100,rh[j]/ref[k]*100,microColor(p)):bar(p,microColor(p))}${rg?`<div class="tiny muted" style="white-space:nowrap">≈ ${fmt(rl[j])}–${fmt(rh[j])} ${NI[k][1]}</div>`:''}</div>`}).join('');
   const hasOFFnoMicro=entries.some(e=>e.noMicro);
   return `<div class="stack">
   ${d===today()?streakCard(si):''}
@@ -534,7 +536,7 @@ function vHeute(si){
   </section>
   <section class="card stack" style="gap:10px"><div class="row" style="justify-content:space-between"><h2>Vitamine &amp; Mineralstoffe</h2><span class="tiny muted" style="white-space:nowrap">% vom Bedarf</span></div>
     <div class="micro">${micro}</div>
-    ${hasR?'<div class="note">Manche Werte sind aus Zutatenlisten geschätzt. Die wahrscheinliche Spanne steht mit ≈ darunter.</div>':''}
+    ${hasR?'<div class="note">Manche Werte sind aus Zutatenlisten geschätzt. Der hellere Bereich im Balken und die Zahl mit ≈ zeigen die wahrscheinliche Spanne.</div>':''}
     ${hasOFFnoMicro?'<div class="note">Bei manchen gescannten Produkten fehlen Angaben zu Vitaminen und Mineralstoffen. Die Werte sind dann zu niedrig.</div>':''}
   </section></div>`;
 }
