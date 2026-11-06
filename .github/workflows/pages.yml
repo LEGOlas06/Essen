@@ -24,8 +24,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      - name: Seite und Update-Paket bauen
+        run: |
+          V=$(sha256sum www/index.html | cut -c1-12)
+          mkdir site && cp -r www/. site/
+          sed -i "s/__APP_VERSION__/$V/" site/index.html
+          (cd site && zip -qr ../update.zip .)
+          mv update.zip site/
+          echo "{\"version\":\"$V\"}" > site/version.json
+          echo "Version $V"
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: www
+          path: site
       - id: d
         uses: actions/deploy-pages@v4

@@ -512,7 +512,8 @@ function vHeute(si){
     return `<div class="meal"><div class="meal-h"><h3>${l}</h3><div class="row"><span class="kc small">${es.length?Math.round(k)+' kcal':''}</span><button class="sm" data-act="addmeal" data-meal="${m}" aria-label="${l} eintragen">+ Eintragen</button></div></div>
     ${es.map(e=>`<div class="entry"><div class="grow"><div>${esc(e.name)}</div><div class="pfc">${entryTime(e,d)?entryTime(e,d)+' Uhr · ':''}${fmt(e.amt)} ${esc(e.unit)} · E ${fmt(e.n[1])} · K ${fmt(e.n[2])} · F ${fmt(e.n[4])}</div></div><span class="kc">${Math.round(e.n[0])}</span><button class="ghost" data-act="delentry" data-id="${e.id}" aria-label="Eintrag löschen">✕</button></div>`).join('')}</div>`}).join('');
   const ref=REF[g.sex];
-  const micro=MICRO.map(k=>{const p=t[IDX[k]]/ref[k]*100;return `<div class="mi"><div class="l"><span>${NI[k][0]}</span><span class="num muted">${fmt(t[IDX[k]])} ${NI[k][1]} · ${Math.round(p)} %</span></div>${bar(p,microColor(p))}</div>`}).join('');
+  const hasR=entries.some(e=>e.rng); const rl=MICRO.map((k,j)=>entries.reduce((s,e)=>s+(e.rng?e.rng[0][j]:e.n[IDX[k]]),0)), rh=MICRO.map((k,j)=>entries.reduce((s,e)=>s+(e.rng?e.rng[1][j]:e.n[IDX[k]]),0));
+  const micro=MICRO.map((k,j)=>{const p=t[IDX[k]]/ref[k]*100; const rg=hasR&&rh[j]-rl[j]>t[IDX[k]]*0.02; return `<div class="mi"><div class="l"><span>${NI[k][0]}</span><span class="num muted">${fmt(t[IDX[k]])} ${NI[k][1]} · ${Math.round(p)} %</span></div>${bar(p,microColor(p))}${rg?`<div class="tiny muted" style="white-space:nowrap">≈ ${fmt(rl[j])}–${fmt(rh[j])} ${NI[k][1]}</div>`:''}</div>`}).join('');
   const hasOFFnoMicro=entries.some(e=>e.noMicro);
   return `<div class="stack">
   ${d===today()?streakCard(si):''}
@@ -533,6 +534,7 @@ function vHeute(si){
   </section>
   <section class="card stack" style="gap:10px"><div class="row" style="justify-content:space-between"><h2>Vitamine &amp; Mineralstoffe</h2><span class="tiny muted" style="white-space:nowrap">% vom Bedarf</span></div>
     <div class="micro">${micro}</div>
+    ${hasR?'<div class="note">Manche Werte sind aus Zutatenlisten geschätzt. Die wahrscheinliche Spanne steht mit ≈ darunter.</div>':''}
     ${hasOFFnoMicro?'<div class="note">Bei manchen gescannten Produkten fehlen Angaben zu Vitaminen und Mineralstoffen. Die Werte sind dann zu niedrig.</div>':''}
   </section></div>`;
 }
@@ -608,9 +610,9 @@ function svgI(p){return `<svg viewBox="0 0 24 24" width="18" height="18" fill="n
 /* Mengen-Dialog */
 function amtData(kind,id,food){
   if(kind==='r'){const r=getRecipe(id); const c=recipeCalc(r); return {kind,ref:id,name:r.name,per:c.per,unitMode:'p',unit:r.unit==='Stück'?'Stück':'Portion',amt:1,portions:[]}}
-  const f=food||getFood(id); return {kind:'f',ref:f.id,name:f.name+(f.brand?' ('+f.brand+')':''),per:f.per,unitMode:'g',unit:'g',amt:(f.portions&&f.portions[0]?f.portions[0][1]:100),noMicro:f.micros===false,portions:f.portions||[],est:f.est||null}}
+  const f=food||getFood(id); return {kind:'f',ref:f.id,name:f.name+(f.brand?' ('+f.brand+')':''),per:f.per,unitMode:'g',unit:'g',amt:(f.portions&&f.portions[0]?f.portions[0][1]:100),noMicro:f.micros===false,portions:f.portions||[],est:f.est||null,rng:f.rng||null}}
 function openAmount(kind,id,food){UI.amt=amtData(kind,id,food); sheetAmount()}
-function makeEntry(a,tm){const f=a.unitMode==='g'?a.amt/100:a.amt; const e={id:uid(),kind:a.kind,ref:a.ref,name:a.name,amt:a.amt,unit:a.unitMode==='g'?'g':a.unit,meal:UI.meal,time:tm,n:a.per.map(v=>Math.round(v*f*1000)/1000),t:Date.now()}; if(a.noMicro)e.noMicro=true; return e}
+function makeEntry(a,tm){const f=a.unitMode==='g'?a.amt/100:a.amt; const e={id:uid(),kind:a.kind,ref:a.ref,name:a.name,amt:a.amt,unit:a.unitMode==='g'?'g':a.unit,meal:UI.meal,time:tm,n:a.per.map(v=>Math.round(v*f*1000)/1000),t:Date.now()}; if(a.noMicro)e.noMicro=true; if(a.rng)e.rng=a.rng.map(arr=>arr.map(v=>Math.round(v*f*1000)/1000)); return e}
 /* Mehrfachauswahl */
 UI.sel=[];
 function selKey(kind,id){return kind+':'+id}
@@ -640,7 +642,7 @@ function sheetAmount(){
   const a=UI.amt; const f=a.unitMode==='g'?a.amt/100:a.amt; const n=a.per.map(v=>v*f);
   const quick=a.unitMode==='p'?[['½',0.5],['1',1],['1½',1.5],['2',2],['3',3]]:[...a.portions.map(p=>[p[0]+' ('+p[1]+' g)',p[1]]),['100 g',100]];
   openSheet(`<div class="stack"><div><div class="label">${MEALS.find(m=>m[0]===UI.meal)[1]} · ${fmtDate(UI.date)}</div><h2 style="margin-top:4px">${esc(a.name)}</h2></div>
-   ${a.est&&a.est.length?`<details class="note"><summary>Vitamine und Mineralstoffe sind aus den Zutaten geschätzt</summary><div class="tiny" style="margin-top:6px">${a.est.map(esc).join('<br>')}</div></details>`:''}
+   ${a.est&&a.est.length?`<details class="note"><summary>Vitamine und Mineralstoffe sind aus den Zutaten geschätzt (mit Spanne)</summary>${a.rng?`<div class="tiny" style="margin-top:6px">${MICRO.filter((k,j)=>a.rng[1][j]>0).slice(0,15).map(k=>{const j=MICRO.indexOf(k), q=a.unitMode==='g'?a.amt/100:a.amt; return `${NI[k][0]}: ${fmt(a.rng[0][j]*q)}–${fmt(a.rng[1][j]*q)} ${NI[k][1]}`}).join(' · ')}</div>`:''}<div class="tiny" style="margin-top:6px">${a.est.map(esc).join('<br>')}</div></details>`:''}
    <div class="row"><input id="amt" type="number" inputmode="decimal" min="0" step="any" value="${a.amt}" style="max-width:130px" aria-label="Menge"><span class="muted">${a.unitMode==='g'?'Gramm':a.unit==='Stück'?'Stück':'Portionen'}</span></div>
    <div class="row wrapr">${quick.map(q=>`<button class="sm" data-act="quick" data-v="${q[1]}">${esc(q[0])}</button>`).join('')}</div>
    <div class="row"><label for="amtTime" class="small muted" style="white-space:nowrap">Gegessen um</label><input id="amtTime" type="time" value="${a.time||(UI.date===today()?nowHM():MEALTIME[UI.meal])}" style="max-width:130px"></div>
@@ -665,15 +667,19 @@ function addEntry(){
 
 /* Open Food Facts */
 const OFFMAP={vA:['vitamin-a',1e6],vC:['vitamin-c',1e3],vD:['vitamin-d',1e6],vE:['vitamin-e',1e3],vK:['vitamin-k',1e6],b1:['vitamin-b1',1e3],b2:['vitamin-b2',1e3],b6:['vitamin-b6',1e3],b12:['vitamin-b12',1e6],fol:['vitamin-b9',1e6],ca:['calcium',1e3],mg:['magnesium',1e3],fe:['iron',1e3],zn:['zinc',1e3],k:['potassium',1e3]};
-const OFF_FIELDS='code,product_name,product_name_de,brands,nutriments,serving_quantity';
+const OFF_FIELDS='code,product_name,product_name_de,brands,nutriments,serving_quantity,ingredients_text_de,ingredients_text';
 function offToFood(p){
   const n=p.nutriments||{}; const g=k=>{const v=n[k+'_100g'];return v==null||v===''?null:Number(v)};
   let kcal=g('energy-kcal'); if(kcal==null&&g('energy')!=null)kcal=g('energy')/4.184;
   const per=zero(); per[0]=kcal||0; per[1]=g('proteins')||0; per[2]=g('carbohydrates')||0; per[3]=g('sugars')||0; per[4]=g('fat')||0; per[5]=g('saturated-fat')||0; per[6]=g('fiber')||0; per[7]=g('salt')!=null?g('salt'):(g('sodium')||0)*2.5;
-  let any=false; for(const k of MICRO){const [key,mul]=OFFMAP[k]; let v=g(key); if(k==='fol'&&v==null)v=g('folates'); if(v!=null){per[IDX[k]]=v*mul;any=true}}
+  let any=false; const given={}; for(const k of MICRO){const [key,mul]=OFFMAP[k]; let v=g(key); if(k==='fol'&&v==null)v=g('folates'); if(v!=null){per[IDX[k]]=v*mul;given[k]=v*mul;any=true}}
   const name=(p.product_name_de||p.product_name||'Unbenanntes Produkt').trim();
   const portions=p.serving_quantity?[['1 Portion',Math.round(Number(p.serving_quantity))]]:[];
-  return {id:'off-'+p.code,code:p.code,name,brand:(p.brands||'').split(',')[0].trim(),per:per.map(v=>Math.round(v*1000)/1000),portions,src:'off',micros:any};
+  const ing=String(p.ingredients_text_de||p.ingredients_text||'').replace(/_/g,'').trim();
+  const food={id:'off-'+p.code,code:p.code,name,brand:(p.brands||'').split(',')[0].trim(),per:per.map(v=>Math.round(v*1000)/1000),portions,src:'off',micros:any,ingredients:ing||undefined};
+  /* Fehlen Vitamine, aus der Zutatenliste schätzen (die echten Angaben der Packung bleiben) */
+  if(ing&&Object.keys(given).length<MICRO.length){try{const est=estimateMicros(ing,food.per); if(est)applyEstimate(food,est,given)}catch(e){}}
+  return food;
 }
 async function offFetch(url){const r=await fetch(url,{headers:{'Accept':'application/json'}}); if(!r.ok)throw new Error('HTTP '+r.status); return r.json()}
 const NOONLINE_A='Die Online-Suche (Open Food Facts) ist in dieser Ansicht gesperrt. Öffne die App-Datei direkt im Handy-Browser, dann gehen Barcode-Scan und Online-Suche. Bis dahin: lokale Datenbank nutzen oder Produkt selbst anlegen (Nährwerte stehen auf der Packung).';
@@ -681,14 +687,14 @@ const NOONLINE_F='Open Food Facts antwortet gerade nicht (der Server ist manchma
 function noOnline(){return (window.claude&&window.claude.use)?NOONLINE_A:NOONLINE_F}
 async function lookupBarcode(code){
   code=String(code).replace(/\D/g,''); if(code.length<6){toast('Das sieht nicht nach einem Barcode aus.');return}
-  const known=S.foods['off-'+code]; if(known){openAmount('f',known.id,known);return}
+  const known=S.foods['off-'+code]; if(known&&(known.micros!==false||known.ingTried)){openAmount('f',known.id,known);return}
   UI.onlineState='Suche Barcode '+code+' …'; render();
   try{/* v0 antwortet auch bei unbekannten Produkten mit 200 (v2 schickt 404, das sah wie ein Netzfehler aus) */
     let j=null; for(const u of [`https://world.openfoodfacts.org/api/v0/product/${code}.json?fields=${OFF_FIELDS}`,`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=${OFF_FIELDS}`,`https://world.openfoodfacts.net/api/v2/product/${code}.json?fields=${OFF_FIELDS}`]){
       try{const r=await fetch(u,{headers:{'Accept':'application/json'}}); if(r.status===404){j={status:0};break} if(!r.ok)continue; j=await r.json(); if(j)break}catch(e){}}
     if(!j)throw new Error('offline');
     if(j.status!==1||!j.product){UI.onlineState=`Barcode ${code} ist bei Open Food Facts nicht bekannt. Tipp: „Packung lesen“ holt Nährwerte und Zutaten direkt von der Verpackung.`;render();return}
-    const f=offToFood(j.product); S.foods[f.id]=f; Store.saveMeta(); UI.onlineState=''; render(); openAmount('f',f.id,f);
+    const f=offToFood(j.product); f.ingTried=true; S.foods[f.id]=f; Store.saveMeta(); UI.onlineState=''; render(); openAmount('f',f.id,f);
   }catch(e){UI.onlineState=noOnline();render()}
 }
 async function searchOnline(){
@@ -758,9 +764,11 @@ function parseLabel(text){
   const pm=low.match(/(?:portion|serving)[^\d\n]{0,20}(\d+(?:[.,]\d+)?)\s*(g|ml)/); if(pm)out.portion=parseFloat(pm[1].replace(',','.'));
   return out}
 function splitIngredients(s){const out=[]; let depth=0,cur='';
-  for(const ch of String(s)){if('([{'.includes(ch))depth++; if(')]}'.includes(ch))depth=Math.max(0,depth-1); if((ch===','||ch===';')&&depth===0){out.push(cur);cur=''} else cur+=ch} out.push(cur);
+  const str=String(s).replace(/(\d),(\d)/g,'$1\u00b7$2'); /* Dezimalkomma schützen */
+  for(const ch of str){if('([{'.includes(ch))depth++; if(')]}'.includes(ch))depth=Math.max(0,depth-1); if((ch===','||ch===';')&&depth===0){out.push(cur);cur=''} else cur+=ch} out.push(cur);
+  out.forEach((x,i)=>out[i]=x.replace(/\u00b7/g,','));
   return out.map(x=>{const pct=x.match(/(\d+(?:[.,]\d+)?)\s*%/); const name=x.replace(/\([^)]*\)|\[[^\]]*\]/g,' ').replace(/\d+(?:[.,]\d+)?\s*%/g,' ').replace(/[*:.]/g,' ').replace(/\b(bio|aus|kontrolliert\w*|anbau|teilweise|gehärtet)\b/gi,' ').replace(/\s+/g,' ').trim(); return {name,pct:pct?parseFloat(pct[1].replace(',','.')):null}}).filter(x=>x.name.length>1)}
-const ADDITIVE=/^(e ?\d{3}|emulgator|säuerungsmittel|sauerungsmittel|aroma|natürliches aroma|antioxidationsmittel|stabilisator|verdickungsmittel|farbstoff|konservierungsstoff|backtriebmittel|trennmittel|geschmacksverstärker|feuchthaltemittel|überzugsmittel|süßungsmittel|jodsalz|salz|speisesalz|meersalz|steinsalz|wasser|trinkwasser|vitamin|eisen|zink|calcium|säureregulator|lecithin|backtriebmittel|ammonium|kalium|natrium|natron|zitronensäure|citronensäure|ascorbinsäure|hefeextrakt|gewürz|gewürze|kräuter|pfeffer|enzym|kurkuma|zimt|muskat|vanille|aroma)/i;
+const ADDITIVE=/^(e ?\d{3}|emulgator|säuerungsmittel|sauerungsmittel|aroma|natürliches aroma|antioxidationsmittel|stabilisator|verdickungsmittel|farbstoff|konservierungsstoff|backtriebmittel|trennmittel|geschmacksverstärker|feuchthaltemittel|überzugsmittel|süßungsmittel|jodsalz|salz|speisesalz|meersalz|steinsalz|wasser|trinkwasser|vitamin|eisen|zink|calcium|säureregulator|lecithin|backtriebmittel|ammonium|kalium|natrium|natron|zitronensäure|citronensäure|ascorbinsäure|hefeextrakt|gewürz|gewürze|kräuter|pfeffer|enzym|kurkuma|zimt|muskat|vanille|vanillin|aroma)/i;
 function matchIngredient(name){const n=name.toLowerCase(); if(ADDITIVE.test(n)||/carbonat|phosphat|säure$|diphosphat|pektin|guarkern|xanthan|carrageen/.test(n))return null;
   const ok=x=>x.kind==='f'&&(x.id.startsWith('bls')||x.id.startsWith('ch')||F[x.id]);
   const stem=w=>w.replace(/(nen|en|e|n|s)$/,''); const words=name.split(' '); const main=words[words.length-1];
@@ -773,16 +781,26 @@ function matchIngredient(name){const n=name.toLowerCase(); if(ADDITIVE.test(n)||
 function estimateMicros(ingText,per){
   const ings=splitIngredients(ingText).slice(0,15).map(x=>({...x,m:matchIngredient(x.name)}));
   const used=ings.filter(x=>x.m); if(!used.length)return null;
-  const given=used.filter(x=>x.pct!=null).reduce((s,x)=>s+x.pct,0); const unk=used.filter(x=>x.pct==null);
-  let rest=Math.max(5,100-given), g=unk.map((_,i)=>Math.pow(0.55,i)); const gs=g.reduce((a,b)=>a+b,0)||1; unk.forEach((x,i)=>x.w0=rest*g[i]/gs); used.forEach(x=>{if(x.pct!=null)x.w0=x.pct; x.w=x.w0});
+  const given=used.filter(x=>x.pct!=null).reduce((s,x)=>s+x.pct,0); const unk=used.filter(x=>x.pct==null); const rest=Math.max(5,100-given);
   const T=[['prot',4],['carb',8],['fat',4],['fib',2],['sugar',5],['salt',0.4]].filter(([k])=>per[IDX[k]]!=null&&!isNaN(per[IDX[k]]));
-  if(T.length>=3){for(let it=0;it<3000;it++){const pred=T.map(([k])=>used.reduce((s,x)=>s+x.w*x.m.per[IDX[k]]/100,0));
-    used.forEach(x=>{if(x.pct!=null)return; let gr=0; T.forEach(([k,sc],j)=>{gr+=2*(pred[j]-per[IDX[k]])/(sc*sc)*x.m.per[IDX[k]]/100}); gr+=0.004*(x.w-x.w0); x.w=Math.max(0,x.w-0.5*gr)});
-    let cap=Infinity; used.forEach(x=>{if(x.pct!=null){cap=Math.min(cap,x.pct);return} x.w=Math.min(x.w,cap); cap=x.w}); /* Zutaten stehen nach Menge sortiert */
-    const sum=used.reduce((s,x)=>s+x.w,0); if(sum>160)used.forEach(x=>{if(x.pct==null)x.w*=160/sum})}}
-  const mic={}; MICRO.forEach(k=>{mic[k]=used.reduce((s,x)=>s+x.w*(x.m.per[IDX[k]]||0)/100,0)});
-  const mac={}; ['kcal','prot','carb','sugar','fat','sat','fib','salt'].forEach(k=>{mac[k]=used.reduce((s,x)=>s+x.w*(x.m.per[IDX[k]]||0)/100,0)});
-  return {mic,mac,list:ings.map(x=>({name:x.name,match:x.m?x.m.name:null,w:x.m?Math.round(x.w):null,pct:x.pct}))}}
+  const fit=decay=>{const g=unk.map((_,i)=>Math.pow(decay,i)); const gs=g.reduce((a,b)=>a+b,0)||1; const w0=used.map(x=>x.pct!=null?x.pct:rest*g[unk.indexOf(x)]/gs); const w=[...w0];
+    if(T.length>=3){for(let it=0;it<3000;it++){const pred=T.map(([k])=>used.reduce((s,x,i)=>s+w[i]*x.m.per[IDX[k]]/100,0));
+      used.forEach((x,i)=>{if(x.pct!=null)return; let gr=0; T.forEach(([k,sc],j)=>{gr+=2*(pred[j]-per[IDX[k]])/(sc*sc)*x.m.per[IDX[k]]/100}); gr+=0.004*(w[i]-w0[i]); w[i]=Math.max(0,w[i]-0.5*gr)});
+      let cap=Infinity; used.forEach((x,i)=>{if(x.pct!=null){cap=Math.min(cap,x.pct);return} w[i]=Math.min(w[i],cap); cap=w[i]}); /* Zutaten stehen nach Menge sortiert */
+      const sum=w.reduce((a,b)=>a+b,0); if(sum>160)used.forEach((x,i)=>{if(x.pct==null)w[i]*=160/sum})}}
+    return w};
+  const mix=w=>{const o={}; NK.forEach(k=>{o[k]=used.reduce((s,x,i)=>s+w[i]*(x.m.per[IDX[k]]||0)/100,0)}); return o};
+  const runs=[0.55,0.35,0.75].map(fit), mixes=runs.map(mix); const w=runs[0];
+  const mic={}, mac={}, lo={}, hi={}; NK.forEach(k=>{(MICRO.includes(k)?mic:mac)[k]=mixes[0][k]});
+  /* Spanne: verschiedene Annahmen zu den Mengen, dazu Unsicherheit durch Zuordnung und Verarbeitung (−25 % / +30 %) */
+  MICRO.forEach(k=>{const v=mixes.map(m=>m[k]); lo[k]=Math.min(...v)*0.75; hi[k]=Math.max(...v)*1.3});
+  used.forEach((x,i)=>x.w=w[i]);
+  return {mic,mac,lo,hi,list:ings.map(x=>({name:x.name,match:x.m?x.m.name:null,w:x.m?Math.round(x.w):null,pct:x.pct}))}}
+/* Schätzung in ein Lebensmittel übernehmen; Werte, die wirklich auf der Packung stehen (given), bleiben exakt */
+function applyEstimate(food,est,given){const lo=[],hi=[];
+  MICRO.forEach((k,j)=>{const i=IDX[k]; if(given&&given[k]!=null){food.per[i]=given[k]; lo[j]=hi[j]=given[k]} else if(est){food.per[i]=Math.round(est.mic[k]*1000)/1000; lo[j]=Math.round(est.lo[k]*1000)/1000; hi[j]=Math.round(est.hi[k]*1000)/1000} else {lo[j]=hi[j]=food.per[i]}});
+  if(est){food.rng=[lo,hi]; food.micros=true; food.est=est.list.filter(x=>x.match).map(x=>`${x.name} → ${x.match} (${x.pct!=null?String(x.pct).replace('.',','):'ca. '+x.w} %)`).slice(0,10)}
+  return food}
 function nativeOCR(){try{return window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()&&Capacitor.Plugins&&Capacitor.Plugins.TextReader||null}catch(e){return null}}
 function blobB64(b){return new Promise((res,rej)=>{const r=new FileReader(); r.onload=()=>res(String(r.result)); r.onerror=rej; r.readAsDataURL(b)})}
 /* ML-Kit-Zeilen nach Höhe zu Tabellenzeilen zusammenfassen (links nach rechts) */
@@ -831,11 +849,10 @@ function labelGo(){const d=UI.label; const v=id=>{const x=document.getElementByI
   const est=ing?estimateMicros(ing,per):null;
   const fin=zero(); NK.forEach((k,i)=>{fin[i]=per[i]!=null?per[i]:(est&&est.mac[k]!=null&&!MICRO.includes(k)?Math.round(est.mac[k]*10)/10:0)});
   if(per[0]==null&&per[1]!=null)fin[0]=Math.round(fin[1]*4+fin[2]*4+fin[4]*9+fin[6]*2);
-  if(est)MICRO.forEach(k=>{fin[IDX[k]]=Math.round(est.mic[k]*1000)/1000});
-  Object.keys(d.vit||{}).forEach(k=>{if(IDX[k]!=null&&MICRO.includes(k))fin[IDX[k]]=+d.vit[k]});
   if(!(fin[0]>0)){toast('Bitte mindestens die Kalorien eintragen.');return}
-  const id='own-'+uid(); const food={id,code:id,name,brand,per:fin.map(x=>Math.round(x*1000)/1000),portions:portion>0?[['1 Portion',portion]]:[],src:'label',micros:!!est||Object.keys(d.vit||{}).length>0,ingredients:ing,est:est?est.list.filter(x=>x.match).map(x=>`${x.name} → ${x.match} (${x.pct!=null?x.pct:'ca. '+x.w} %)`).slice(0,8):null};
-  S.foods[id]=food; Store.saveMeta(); UI.label=null; openAmount('f',id,food)}
+  const given={}; Object.keys(d.vit||{}).forEach(k=>{if(MICRO.includes(k)&&!isNaN(+d.vit[k]))given[k]=+d.vit[k]});
+  const id='own-'+uid(); const food={id,code:id,name,brand,per:fin.map(x=>Math.round(x*1000)/1000),portions:portion>0?[['1 Portion',portion]]:[],src:'label',micros:Object.keys(given).length>0,ingredients:ing};
+  applyEstimate(food,est,given); S.foods[id]=food; Store.saveMeta(); UI.label=null; openAmount('f',id,food)}
 
 /* Barcode-Scanner (html5-qrcode wird erst bei Bedarf geladen) */
 let scanner=null;
@@ -1277,6 +1294,17 @@ document.getElementById('labelImg').addEventListener('change',e=>{const f=[...e.
 document.getElementById('barcodeImg').addEventListener('change',e=>{const f=e.target.files[0]; if(f)scanPhoto(f); e.target.value=''});
 setInterval(()=>{if(UI.date>today()||(UI.lastToday&&UI.lastToday!==today()&&UI.date===UI.lastToday)){UI.date=today();render()} UI.lastToday=today()},60000);
 
+/* Selbst-Update der Handy-App: neue Web-Version von GitHub Pages laden, ohne APK neu zu installieren */
+const APP_VERSION='__APP_VERSION__', UPD_BASE='https://legolas06.github.io/Essen/';
+function updater(){try{return window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()&&Capacitor.Plugins&&Capacitor.Plugins.CapacitorUpdater||null}catch(e){return null}}
+let updBusy=false, updLast=0, updId=null;
+function updBar(){let el=document.getElementById('updBar'); if(!updId){if(el)el.remove();return}
+  if(!el){el=document.createElement('div'); el.id='updBar'; el.className='selbar'; el.style.bottom='auto'; el.style.top='calc(10px + env(safe-area-inset-top,0px))'; document.body.appendChild(el)}
+  el.innerHTML='<span>Neue Version bereit</span><button class="primary sm" id="updNow">Jetzt aktualisieren</button>'; document.getElementById('updNow').onclick=async()=>{try{await Store.saveMeta()}catch(e){} try{await updater().set({id:updId})}catch(e){toast('Update kommt beim nächsten Start.')}}}
+async function checkUpdate(force){const U=updater(); if(!U||updBusy||APP_VERSION.startsWith('__'))return; if(!force&&Date.now()-updLast<20*60*1000)return; updBusy=true; updLast=Date.now();
+  try{const v=await (await fetch(UPD_BASE+'version.json?t='+Date.now(),{cache:'no-store'})).json(); if(!v||!v.version||v.version===APP_VERSION||updId)return;
+    const b=await U.download({url:UPD_BASE+'update.zip?v='+v.version,version:v.version}); await U.next({id:b.id}); updId=b.id; updBar()}catch(e){}finally{updBusy=false}}
+(function(){const U=updater(); if(U){try{U.notifyAppReady()}catch(e){} setTimeout(()=>checkUpdate(true),3000); document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkUpdate(false)})}})();
 loadLocal(); UI.lastToday=today(); render(); connectCloud(); if(S.settings.hcSync)setTimeout(()=>syncHealth(false),800);
 </script>
 

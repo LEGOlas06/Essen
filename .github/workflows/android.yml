@@ -22,6 +22,11 @@ jobs:
           java-version: 21
       - name: Abhängigkeiten
         run: npm install
+      - name: Versionsnummer eintragen (für das Selbst-Update)
+        run: |
+          V=$(sha256sum www/index.html | cut -c1-12)
+          sed -i "s/__APP_VERSION__/$V/" www/index.html
+          echo "Version $V"
       - name: Android-Projekt erzeugen
         run: npm run android:prepare
       - name: Signatur-Schlüssel (gleich bleibend, damit Updates ohne Neuinstallation gehen)

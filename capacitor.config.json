@@ -2,5 +2,17 @@
   "appId": "io.github.legolas06.tellerflamme",
   "appName": "Tellerflamme",
   "webDir": "www",
-  "android": { "backgroundColor": "#140a2e" }
+  "android": {
+    "backgroundColor": "#140a2e"
+  },
+  "plugins": {
+    "CapacitorUpdater": {
+      "autoUpdate": false,
+      "statsUrl": "",
+      "updateUrl": "",
+      "channelUrl": "",
+      "resetWhenUpdate": true,
+      "appReadyTimeout": 15000
+    }
+  }
 }
