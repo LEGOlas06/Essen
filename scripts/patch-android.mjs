@@ -31,12 +31,20 @@ const acts = `
                 <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
             </intent-filter>
         </activity-alias>
+        <receiver android:name=".StreakWidget" android:exported="false" android:label="Tellerflamme Streak">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/streak_widget_info" />
+        </receiver>
 `;
 if (!x.includes('READ_ACTIVE_CALORIES_BURNED')) {
   x = x.replace(/<application/, perms + '\n    <application');
   x = x.replace(/<\/application>/, acts + '    </application>');
   fs.writeFileSync(mf, x);
 }
+// Widget und eigene Java-Dateien (überschreibt MainActivity)
+fs.cpSync('android-extra', 'android', { recursive: true });
 const vg = 'android/variables.gradle';
 let v = fs.readFileSync(vg, 'utf8');
 v = v.replace(/minSdkVersion\s*=\s*\d+/, 'minSdkVersion = 26');
