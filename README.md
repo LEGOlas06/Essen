@@ -4,7 +4,7 @@ Kostenloser Ernährungs-Tracker mit Streaks, Vitaminen und Mineralstoffen, Rezep
 
 - **Webseite:** wird bei jedem Push nach `main` über GitHub Pages veröffentlicht (`www/`).
 - **Home Assistant:** Vorrat, Einkaufsliste, Rezeptvorschläge nach Vitaminlücken und Abgleich zwischen Handy und Tablet. Anleitung: [homeassistant/README.md](homeassistant/README.md).
-- **Android-App:** wird bei jedem Push automatisch gebaut. Die neueste APK liegt unter *Releases → Tellerflamme (neueste Version)*. Die App liest über Health Connect Aktivkalorien und Gewicht (z. B. von Samsung Health).
+- **Android-App:** wird bei jedem Push automatisch gebaut. Die neueste APK liegt unter *Releases → Tellerflamme (neueste Version)* (als Vorabversion markiert, damit HACS sie nicht mit der Home-Assistant-Erweiterung verwechselt). Die App liest über Health Connect Aktivkalorien und Gewicht (z. B. von Samsung Health).
 
 ## Datenquellen
 - Eigene Lebensmittel-Datenbank (Richtwerte nach USDA/BLS)

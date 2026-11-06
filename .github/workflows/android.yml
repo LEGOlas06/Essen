@@ -48,4 +48,6 @@ jobs:
           name: Tellerflamme (neueste Version)
           body: "Automatisch gebaut aus ${{ github.sha }}. tellerflamme.apk auf dem Handy herunterladen und installieren."
           files: tellerflamme.apk
-          make_latest: true
+          # Vorabversion, damit HACS (Home Assistant) die Erweiterung aus den ha-v…-Releases nimmt und nicht die APK
+          prerelease: true
+          make_latest: false
