@@ -34,7 +34,7 @@ jobs:
           KEYSTORE_B64: ${{ secrets.DEBUG_KEYSTORE_B64 }}
         run: |
           mkdir -p ~/.android
-          if [ -n "$KEYSTORE_B64" ]; then echo "$KEYSTORE_B64" | base64 -d > ~/.android/debug.keystore; else echo "Kein DEBUG_KEYSTORE_B64-Secret, nutze Zufallsschlüssel"; fi
+          if [ -n "$KEYSTORE_B64" ]; then echo "$KEYSTORE_B64" | base64 -d > ~/.android/debug.keystore; else cp signing/debug.keystore ~/.android/debug.keystore; echo "Nutze den Schlüssel aus signing/debug.keystore"; fi
       - name: APK bauen
         working-directory: android
         run: |
