@@ -209,6 +209,7 @@ nav.tabs button.add svg{background:var(--accent);width:36px;height:36px;padding:
 <input type="file" id="importFile" accept=".json,application/json" hidden>
 <input type="file" id="healthFile" accept=".zip,.csv,text/csv,application/zip" multiple hidden>
 <input type="file" id="barcodeImg" accept="image/*" capture="environment" hidden>
+<input type="file" id="labelImg" accept="image/*" multiple hidden>
 
 <script>
 "use strict";
@@ -588,6 +589,8 @@ function vAdd(){
     <button data-act="photo">${svgI('<path d="M4 8h3l2-2h6l2 2h3v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/>')}Foto</button>
     <button data-act="online" ${UI.q.trim().length<2?'disabled':''}>${svgI('<circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c2.5 2.5 2.5 13.5 0 16M12 4c-2.5 2.5-2.5 13.5 0 16"/>')}Online</button>
   </div>
+  <button data-act="label">${svgI('<path d="M7 3h10v18H7zM10 7h4M10 11h4M10 15h2"/>')}Packung lesen: Nährwerte und Zutaten</button>
+  ${UI.labelState?`<div class="note" id="lblState" role="status">${esc(UI.labelState)}</div>`:''}
   <div id="reader" ${UI.scanning?'':'hidden'}></div>
   ${UI.scanning?'<button data-act="stopscan">Scannen beenden</button>':''}
   <div class="row"><input id="ean" inputmode="numeric" placeholder="Barcode-Nummer eintippen" aria-label="Barcode-Nummer"><button data-act="ean">Suchen</button></div>
@@ -605,7 +608,7 @@ function svgI(p){return `<svg viewBox="0 0 24 24" width="18" height="18" fill="n
 /* Mengen-Dialog */
 function amtData(kind,id,food){
   if(kind==='r'){const r=getRecipe(id); const c=recipeCalc(r); return {kind,ref:id,name:r.name,per:c.per,unitMode:'p',unit:r.unit==='Stück'?'Stück':'Portion',amt:1,portions:[]}}
-  const f=food||getFood(id); return {kind:'f',ref:f.id,name:f.name+(f.brand?' ('+f.brand+')':''),per:f.per,unitMode:'g',unit:'g',amt:(f.portions&&f.portions[0]?f.portions[0][1]:100),noMicro:f.micros===false,portions:f.portions||[]}}
+  const f=food||getFood(id); return {kind:'f',ref:f.id,name:f.name+(f.brand?' ('+f.brand+')':''),per:f.per,unitMode:'g',unit:'g',amt:(f.portions&&f.portions[0]?f.portions[0][1]:100),noMicro:f.micros===false,portions:f.portions||[],est:f.est||null}}
 function openAmount(kind,id,food){UI.amt=amtData(kind,id,food); sheetAmount()}
 function makeEntry(a,tm){const f=a.unitMode==='g'?a.amt/100:a.amt; const e={id:uid(),kind:a.kind,ref:a.ref,name:a.name,amt:a.amt,unit:a.unitMode==='g'?'g':a.unit,meal:UI.meal,time:tm,n:a.per.map(v=>Math.round(v*f*1000)/1000),t:Date.now()}; if(a.noMicro)e.noMicro=true; return e}
 /* Mehrfachauswahl */
@@ -637,6 +640,7 @@ function sheetAmount(){
   const a=UI.amt; const f=a.unitMode==='g'?a.amt/100:a.amt; const n=a.per.map(v=>v*f);
   const quick=a.unitMode==='p'?[['½',0.5],['1',1],['1½',1.5],['2',2],['3',3]]:[...a.portions.map(p=>[p[0]+' ('+p[1]+' g)',p[1]]),['100 g',100]];
   openSheet(`<div class="stack"><div><div class="label">${MEALS.find(m=>m[0]===UI.meal)[1]} · ${fmtDate(UI.date)}</div><h2 style="margin-top:4px">${esc(a.name)}</h2></div>
+   ${a.est&&a.est.length?`<details class="note"><summary>Vitamine und Mineralstoffe sind aus den Zutaten geschätzt</summary><div class="tiny" style="margin-top:6px">${a.est.map(esc).join('<br>')}</div></details>`:''}
    <div class="row"><input id="amt" type="number" inputmode="decimal" min="0" step="any" value="${a.amt}" style="max-width:130px" aria-label="Menge"><span class="muted">${a.unitMode==='g'?'Gramm':a.unit==='Stück'?'Stück':'Portionen'}</span></div>
    <div class="row wrapr">${quick.map(q=>`<button class="sm" data-act="quick" data-v="${q[1]}">${esc(q[0])}</button>`).join('')}</div>
    <div class="row"><label for="amtTime" class="small muted" style="white-space:nowrap">Gegessen um</label><input id="amtTime" type="time" value="${a.time||(UI.date===today()?nowHM():MEALTIME[UI.meal])}" style="max-width:130px"></div>
@@ -673,14 +677,17 @@ function offToFood(p){
 }
 async function offFetch(url){const r=await fetch(url,{headers:{'Accept':'application/json'}}); if(!r.ok)throw new Error('HTTP '+r.status); return r.json()}
 const NOONLINE_A='Die Online-Suche (Open Food Facts) ist in dieser Ansicht gesperrt. Öffne die App-Datei direkt im Handy-Browser, dann gehen Barcode-Scan und Online-Suche. Bis dahin: lokale Datenbank nutzen oder Produkt selbst anlegen (Nährwerte stehen auf der Packung).';
-const NOONLINE_F='Open Food Facts ist gerade nicht erreichbar. Prüf deine Internetverbindung und versuch es gleich nochmal.';
+const NOONLINE_F='Open Food Facts antwortet gerade nicht (der Server ist manchmal überlastet). Versuch es gleich nochmal oder nutze „Packung lesen“.';
 function noOnline(){return (window.claude&&window.claude.use)?NOONLINE_A:NOONLINE_F}
 async function lookupBarcode(code){
   code=String(code).replace(/\D/g,''); if(code.length<6){toast('Das sieht nicht nach einem Barcode aus.');return}
   const known=S.foods['off-'+code]; if(known){openAmount('f',known.id,known);return}
   UI.onlineState='Suche Barcode '+code+' …'; render();
-  try{const j=await offFetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=${OFF_FIELDS}`);
-    if(j.status!==1||!j.product){UI.onlineState=`Barcode ${code} ist bei Open Food Facts nicht bekannt. Leg das Produkt selbst an.`;render();return}
+  try{/* v0 antwortet auch bei unbekannten Produkten mit 200 (v2 schickt 404, das sah wie ein Netzfehler aus) */
+    let j=null; for(const u of [`https://world.openfoodfacts.org/api/v0/product/${code}.json?fields=${OFF_FIELDS}`,`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=${OFF_FIELDS}`,`https://world.openfoodfacts.net/api/v2/product/${code}.json?fields=${OFF_FIELDS}`]){
+      try{const r=await fetch(u,{headers:{'Accept':'application/json'}}); if(r.status===404){j={status:0};break} if(!r.ok)continue; j=await r.json(); if(j)break}catch(e){}}
+    if(!j)throw new Error('offline');
+    if(j.status!==1||!j.product){UI.onlineState=`Barcode ${code} ist bei Open Food Facts nicht bekannt. Tipp: „Packung lesen“ holt Nährwerte und Zutaten direkt von der Verpackung.`;render();return}
     const f=offToFood(j.product); S.foods[f.id]=f; Store.saveMeta(); UI.onlineState=''; render(); openAmount('f',f.id,f);
   }catch(e){UI.onlineState=noOnline();render()}
 }
@@ -717,6 +724,87 @@ async function searchUSDA(q){
   const key=S.settings.fdcKey||'DEMO_KEY'; const qe=toEnglish(q);
   const j=await offFetch(`https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${encodeURIComponent(key)}&query=${encodeURIComponent(qe)}&dataType=Foundation,SR%20Legacy&pageSize=15`);
   return {foods:(j.foods||[]).map(fdcToFood).filter(f=>f.per[0]>0),qe}}
+
+/* ---------- Packung fotografieren: Nährwerte + Zutaten lesen, Vitamine schätzen ---------- */
+const LBL_KEYS=['kcal','fat','sat','carb','sugar','fib','prot','salt'];
+function numIn(s){const m=String(s).replace(/(\d)\s+,\s*(\d)/g,'$1,$2').match(/<?\s*(\d+(?:[.,]\d+)?)/); return m?parseFloat(m[1].replace(',','.')):null}
+function parseLabel(text){
+  const raw=String(text).replace(/\r/g,''); const low=raw.toLowerCase();
+  const out={name:'',brand:'',per:{},ingredients:'',vit:{},portion:null};
+  let ni=low.search(/n[äa]hrwert|brennwert|energie|durchschnittlich/); const nut=ni>=0?raw.slice(ni):raw;
+  const lines=nut.split('\n').map(l=>l.trim()).filter(Boolean);
+  const kc=nut.match(/(\d+(?:[.,]\d+)?)\s*kcal/i)||nut.match(/kcal\D{0,6}(\d+(?:[.,]\d+)?)/i); if(kc)out.per.kcal=parseFloat(kc[1].replace(',','.'));
+  else{const kj=nut.match(/(\d+(?:[.,]\d+)?)\s*kj/i); if(kj)out.per.kcal=Math.round(parseFloat(kj[1].replace(',','.'))/4.184)}
+  const rules=[['sat',/ges[äa]tt|fetts[äa]ur|saturat/],['fat',/fett|fat/],['sugar',/zucker|sugar/],['carb',/kohlenhydr|carbohyd/],['fib',/ballast|fibre|fiber/],['prot',/eiwei|protein/],['salt',/salz|salt/]];
+  for(const l of lines){const ll=l.toLowerCase(); for(const [k,re] of rules){if(out.per[k]!=null||!re.test(ll))continue; if(k==='fat'&&/ges[äa]tt|fetts[äa]ur|saturat/.test(ll))continue; if(k==='carb'&&/zucker/.test(ll)&&!/kohlenhydr/.test(ll))continue;
+    const after=l.slice(ll.search(re)); const v=numIn(after.replace(/^[^\d<]*/,'')); if(v!=null&&v<=100)out.per[k]=v; break}}
+  const vre=/(vitamin\s*(a|c|d|e|k|b\s?1|b\s?2|b\s?6|b\s?12)|thiamin|riboflavin|fols[äa]ure|folat|calcium|magnesium|eisen|zink|kalium)\D{0,12}?(\d+(?:[.,]\d+)?)\s*(mg|µg|μg|ug|mcg)/gi; let m;
+  const VMAP={a:'vA',c:'vC',d:'vD',e:'vE',k:'vK',b1:'b1',b2:'b2',b6:'b6',b12:'b12',thiamin:'b1',riboflavin:'b2',folsaure:'fol',folsäure:'fol',folat:'fol',calcium:'ca',magnesium:'mg',eisen:'fe',zink:'zn',kalium:'k'};
+  while((m=vre.exec(nut))){const key=(m[2]?m[2].replace(/\s/g,''):m[1]).toLowerCase(); const nk=VMAP[key]; if(!nk||out.vit[nk]!=null)continue; let v=parseFloat(m[3].replace(',','.')); const u=m[4].toLowerCase(), want=NI[nk][1];
+    if(u==='mg'&&want==='µg')v*=1000; else if(u!=='mg'&&want==='mg')v/=1000; out.vit[nk]=v}
+  const zi=low.search(/zutaten|ingredients/); if(zi>=0){let z=raw.slice(zi).replace(/^[^:]*:?\s*/,''); const stop=z.search(/\n\s*\n|kann spuren|n[äa]hrwert|durchschnittlich|mindestens haltbar|allergen|hergestellt|zu verbrauchen|gekühlt/i); if(stop>0)z=z.slice(0,stop); out.ingredients=z.replace(/\s*\n\s*/g,' ').replace(/\s+/g,' ').trim().replace(/\.$/,'')}
+  const pm=low.match(/(?:portion|serving)[^\d\n]{0,20}(\d+(?:[.,]\d+)?)\s*(g|ml)/); if(pm)out.portion=parseFloat(pm[1].replace(',','.'));
+  return out}
+function splitIngredients(s){const out=[]; let depth=0,cur='';
+  for(const ch of String(s)){if('([{'.includes(ch))depth++; if(')]}'.includes(ch))depth=Math.max(0,depth-1); if((ch===','||ch===';')&&depth===0){out.push(cur);cur=''} else cur+=ch} out.push(cur);
+  return out.map(x=>{const pct=x.match(/(\d+(?:[.,]\d+)?)\s*%/); const name=x.replace(/\([^)]*\)|\[[^\]]*\]/g,' ').replace(/\d+(?:[.,]\d+)?\s*%/g,' ').replace(/[*:.]/g,' ').replace(/\b(bio|aus|kontrolliert\w*|anbau|teilweise|gehärtet)\b/gi,' ').replace(/\s+/g,' ').trim(); return {name,pct:pct?parseFloat(pct[1].replace(',','.')):null}}).filter(x=>x.name.length>1)}
+const ADDITIVE=/^(e ?\d{3}|emulgator|säuerungsmittel|sauerungsmittel|aroma|natürliches aroma|antioxidationsmittel|stabilisator|verdickungsmittel|farbstoff|konservierungsstoff|backtriebmittel|trennmittel|geschmacksverstärker|feuchthaltemittel|überzugsmittel|süßungsmittel|jodsalz|salz|speisesalz|meersalz|steinsalz|wasser|trinkwasser|vitamin|eisen|zink|calcium|säureregulator|lecithin|zitronensäure|citronensäure|ascorbinsäure|hefeextrakt|gewürz|gewürze|kräuter|pfeffer|enzym)/i;
+function matchIngredient(name){const n=name.toLowerCase(); if(ADDITIVE.test(n))return null;
+  const ok=x=>x.kind==='f'&&(x.id.startsWith('bls')||x.id.startsWith('ch')||F[x.id]);
+  const stem=w=>w.replace(/(nen|en|e|n|s)$/,''); const words=name.split(' '); const main=words[words.length-1];
+  const qs=[...new Set([name,stem(name),main,stem(main)])].filter(q=>q.length>=3);
+  const seen=new Map(); qs.forEach((q,qi)=>searchLocal(q).filter(ok).forEach(x=>{const key=phon(stem(q)); const nm=phon(x.name);
+    const sc=x.r+qi*0.3+(new RegExp('^'+key+'\\w{0,3}(\\s|$)').test(nm)?0:nm.startsWith(key)?0.6:1.2)+(/[,(]/.test(x.name)?0.15:0)+x.name.length/80+(x.id.startsWith('bls')?0:0.1); if(!seen.has(x.id)||seen.get(x.id).sc>sc)seen.set(x.id,{x,sc})}));
+  const best=[...seen.values()].sort((a,b)=>a.sc-b.sc)[0]; if(!best)return null; const f=getFood(best.x.id); return f?{name:f.name,per:f.per,id:best.x.id}:null}
+/* Gewichte der Zutaten so wählen, dass sie die Nährwerte der Packung treffen (Reihenfolge und %-Angaben als Vorgabe) */
+function estimateMicros(ingText,per){
+  const ings=splitIngredients(ingText).slice(0,15).map(x=>({...x,m:matchIngredient(x.name)}));
+  const used=ings.filter(x=>x.m); if(!used.length)return null;
+  const given=used.filter(x=>x.pct!=null).reduce((s,x)=>s+x.pct,0); const unk=used.filter(x=>x.pct==null);
+  let rest=Math.max(5,100-given), g=unk.map((_,i)=>Math.pow(0.55,i)); const gs=g.reduce((a,b)=>a+b,0)||1; unk.forEach((x,i)=>x.w0=rest*g[i]/gs); used.forEach(x=>{if(x.pct!=null)x.w0=x.pct; x.w=x.w0});
+  const T=[['prot',4],['carb',8],['fat',4],['fib',2],['sugar',5],['salt',0.4]].filter(([k])=>per[IDX[k]]!=null&&!isNaN(per[IDX[k]]));
+  if(T.length>=3){for(let it=0;it<3000;it++){const pred=T.map(([k])=>used.reduce((s,x)=>s+x.w*x.m.per[IDX[k]]/100,0));
+    used.forEach(x=>{if(x.pct!=null)return; let gr=0; T.forEach(([k,sc],j)=>{gr+=2*(pred[j]-per[IDX[k]])/(sc*sc)*x.m.per[IDX[k]]/100}); gr+=0.004*(x.w-x.w0); x.w=Math.max(0,x.w-0.5*gr)});
+    const sum=used.reduce((s,x)=>s+x.w,0); if(sum>160)used.forEach(x=>{if(x.pct==null)x.w*=160/sum})}}
+  const mic={}; MICRO.forEach(k=>{mic[k]=used.reduce((s,x)=>s+x.w*(x.m.per[IDX[k]]||0)/100,0)});
+  const mac={}; ['kcal','prot','carb','sugar','fat','sat','fib','salt'].forEach(k=>{mac[k]=used.reduce((s,x)=>s+x.w*(x.m.per[IDX[k]]||0)/100,0)});
+  return {mic,mac,list:ings.map(x=>({name:x.name,match:x.m?x.m.name:null,w:x.m?Math.round(x.w):null,pct:x.pct}))}}
+function shrinkImage(file,max=1600){return new Promise(res=>{const img=new Image(); img.onload=()=>{const s=Math.min(1,max/Math.max(img.width,img.height)); const c=document.createElement('canvas'); c.width=Math.round(img.width*s); c.height=Math.round(img.height*s); c.getContext('2d').drawImage(img,0,0,c.width,c.height); c.toBlob(b=>res(b||file),'image/jpeg',0.85); URL.revokeObjectURL(img.src)}; img.onerror=()=>res(file); img.src=URL.createObjectURL(file)})}
+async function readLabel(files){
+  UI.labelState='Lese die Packung … das dauert ein paar Sekunden.'; render();
+  try{const imgs=await Promise.all(files.slice(0,3).map(f=>shrinkImage(f)));
+    let data=null; const caps=Store.sample?await Store.sample.limits().catch(()=>null):null;
+    if(caps&&caps.images){
+      const j=await Store.sample.json(`Du siehst Fotos einer Lebensmittelverpackung (deutsch oder andere Sprache). Lies die Nährwerttabelle (Werte je 100 g bzw. 100 ml, nicht je Portion) und die Zutatenliste ab. Antworte nur mit JSON: {"name": string (Produktname auf Deutsch), "brand": string, "per100": {"kcal": number|null, "fat": number|null, "sat": number|null, "carb": number|null, "sugar": number|null, "fib": number|null, "prot": number|null, "salt": number|null}, "ingredients": string (Zutatenliste auf Deutsch, mit %-Angaben wie gedruckt), "vitamins": {Schlüssel aus vA,vC,vD,vE,vK,b1,b2,b6,b12,fol,ca,mg,fe,zn,k: Wert je 100 g, Vitamin A/D/K/B12/Folat in µg, sonst mg; nur was auf der Packung steht}, "portion_g": number|null}. Erfinde nichts: was nicht lesbar ist, ist null.`,{images:imgs,modelTier:'default'});
+      data={name:j.name||'',brand:j.brand||'',per:j.per100||{},ingredients:j.ingredients||'',vit:j.vitamins||{},portion:j.portion_g||null,via:'Claude'}}
+    else{await loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js'); let text='';
+      for(let i=0;i<imgs.length;i++){const r=await Tesseract.recognize(imgs[i],'deu',{logger:m=>{if(m.status==='recognizing text'){UI.labelState=`Lese Text${imgs.length>1?' (Bild '+(i+1)+')':''} … ${Math.round(m.progress*100)} %`; const el=document.getElementById('lblState'); if(el)el.textContent=UI.labelState}}}); text+='\n\n'+r.data.text}
+      data=parseLabel(text); data.text=text; data.via='Texterkennung'}
+    UI.labelState=''; render(); UI.label=data; sheetLabel();
+  }catch(e){UI.labelState=(window.claude&&window.claude.use&&!Store.sample)?'Die Packungserkennung braucht hier die Erlaubnis für Claude oder die Handy-App.':'Die Packung konnte nicht gelesen werden ('+(e&&e.message||'Fehler')+'). Versuch ein schärferes Foto mit der Nährwerttabelle gerade im Bild, oder trag die Werte selbst ein.'; render()}
+}
+function sheetLabel(){const d=UI.label; const p=d.per||{};
+  const fld=(k)=>`<div class="field"><label for="lb-${k}">${NI[k][0]}</label><input id="lb-${k}" type="number" inputmode="decimal" step="any" min="0" value="${p[k]??''}" placeholder="${NI[k][1]}"></div>`;
+  const vit=Object.keys(d.vit||{}).filter(k=>NI[k]);
+  openSheet(`<div class="stack"><div><div class="label">Packung gelesen · ${esc(d.via||'')}</div><h2 style="margin-top:4px">Bitte kurz prüfen</h2><div class="small muted">Alles ist änderbar. Werte je 100 g bzw. 100 ml.</div></div>
+   <div class="grid2"><div class="field"><label for="lb-name">Name</label><input id="lb-name" value="${esc(d.name||'')}" placeholder="z. B. Müsliriegel"></div><div class="field"><label for="lb-brand">Marke</label><input id="lb-brand" value="${esc(d.brand||'')}"></div></div>
+   <div class="grid2">${LBL_KEYS.map(fld).join('')}</div>
+   <div class="field"><label for="lb-portion">Packungsportion (g, optional)</label><input id="lb-portion" type="number" inputmode="decimal" min="0" value="${d.portion??''}"></div>
+   <div class="field"><label for="lb-ing">Zutaten</label><textarea id="lb-ing" rows="4" placeholder="Zutaten: …">${esc(d.ingredients||'')}</textarea></div>
+   ${vit.length?`<div class="note">Auf der Packung angegeben: ${vit.map(k=>NI[k][0]+' '+fmt(d.vit[k])+' '+NI[k][1]).join(', ')}</div>`:''}
+   ${d.text&&!d.ingredients&&p.kcal==null?`<div class="note">Es wurde kaum etwas erkannt. Am besten die Nährwerttabelle und die Zutatenliste einzeln, gerade und scharf fotografieren.</div>`:''}
+   <button class="primary" data-act="labelgo">Vitamine schätzen und Menge eingeben</button><button data-act="close">Abbrechen</button></div>`)}
+function labelGo(){const d=UI.label; const v=id=>{const x=document.getElementById(id).value; const n=parseFloat(String(x).replace(',','.')); return isNaN(n)?null:n};
+  const per=zero().map(()=>null); LBL_KEYS.forEach(k=>{per[IDX[k]]=v('lb-'+k)});
+  const name=document.getElementById('lb-name').value.trim()||'Produkt von der Packung', brand=document.getElementById('lb-brand').value.trim(), ing=document.getElementById('lb-ing').value.trim(), portion=v('lb-portion');
+  const est=ing?estimateMicros(ing,per):null;
+  const fin=zero(); NK.forEach((k,i)=>{fin[i]=per[i]!=null?per[i]:(est&&est.mac[k]!=null&&!MICRO.includes(k)?Math.round(est.mac[k]*10)/10:0)});
+  if(per[0]==null&&per[1]!=null)fin[0]=Math.round(fin[1]*4+fin[2]*4+fin[4]*9+fin[6]*2);
+  if(est)MICRO.forEach(k=>{fin[IDX[k]]=Math.round(est.mic[k]*1000)/1000});
+  Object.keys(d.vit||{}).forEach(k=>{if(IDX[k]!=null&&MICRO.includes(k))fin[IDX[k]]=+d.vit[k]});
+  if(!(fin[0]>0)){toast('Bitte mindestens die Kalorien eintragen.');return}
+  const id='own-'+uid(); const food={id,code:id,name,brand,per:fin.map(x=>Math.round(x*1000)/1000),portions:portion>0?[['1 Portion',portion]]:[],src:'label',micros:!!est||Object.keys(d.vit||{}).length>0,ingredients:ing,est:est?est.list.filter(x=>x.match).map(x=>`${x.name} → ${x.match} (${x.pct!=null?x.pct:'ca. '+x.w} %)`).slice(0,8):null};
+  S.foods[id]=food; Store.saveMeta(); UI.label=null; openAmount('f',id,food)}
 
 /* Barcode-Scanner (html5-qrcode wird erst bei Bedarf geladen) */
 let scanner=null;
@@ -1101,6 +1189,8 @@ document.addEventListener('click',async ev=>{
     case 'scan':startScan();break;
     case 'stopscan':stopScan();break;
     case 'photo':document.getElementById('barcodeImg').click();break;
+    case 'label':document.getElementById('labelImg').click();break;
+    case 'labelgo':labelGo();break;
     case 'online':searchOnline();break;
     case 'ean':lookupBarcode(document.getElementById('ean').value);break;
     case 'newfood':sheetNewFood();break;
@@ -1152,6 +1242,7 @@ document.addEventListener('change',ev=>{const id=ev.target.id;
 });
 document.getElementById('healthFile').addEventListener('change',e=>{const f=[...e.target.files]; if(f.length)importHealth(f); e.target.value=''});
 document.getElementById('importFile').addEventListener('change',e=>{const f=e.target.files[0]; if(f)importJSON(f); e.target.value=''});
+document.getElementById('labelImg').addEventListener('change',e=>{const f=[...e.target.files]; if(f.length)readLabel(f); e.target.value=''});
 document.getElementById('barcodeImg').addEventListener('change',e=>{const f=e.target.files[0]; if(f)scanPhoto(f); e.target.value=''});
 setInterval(()=>{if(UI.date>today()||(UI.lastToday&&UI.lastToday!==today()&&UI.date===UI.lastToday)){UI.date=today();render()} UI.lastToday=today()},60000);
 
