@@ -50,4 +50,11 @@ const vg = 'android/variables.gradle';
 let v = fs.readFileSync(vg, 'utf8');
 v = v.replace(/minSdkVersion\s*=\s*\d+/, 'minSdkVersion = 26');
 fs.writeFileSync(vg, v);
+// Texterkennung (Google ML Kit, Modell in der App enthalten, funktioniert offline)
+const bg = 'android/app/build.gradle';
+let g = fs.readFileSync(bg, 'utf8');
+if (!g.includes('com.google.mlkit:text-recognition')) {
+  g = g.replace(/dependencies\s*\{/, "dependencies {\n    implementation 'com.google.mlkit:text-recognition:16.0.1'");
+  fs.writeFileSync(bg, g);
+}
 console.log('Android-Projekt angepasst');

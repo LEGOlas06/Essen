@@ -738,23 +738,36 @@ function parseLabel(text){
   const rules=[['sat',/ges[äa]tt|fetts[äa]ur|saturat/],['fat',/fett|fat/],['sugar',/zucker|sugar/],['carb',/kohlenhydr|carbohyd/],['fib',/ballast|fibre|fiber/],['prot',/eiwei|protein/],['salt',/salz|salt/]];
   for(const l of lines){const ll=l.toLowerCase(); for(const [k,re] of rules){if(out.per[k]!=null||!re.test(ll))continue; if(k==='fat'&&/ges[äa]tt|fetts[äa]ur|saturat/.test(ll))continue; if(k==='carb'&&/zucker/.test(ll)&&!/kohlenhydr/.test(ll))continue;
     const after=l.slice(ll.search(re)); const v=numIn(after.replace(/^[^\d<]*/,'')); if(v!=null&&v<=100)out.per[k]=v; break}}
+  /* Viele Etiketten sind verrutscht gedruckt oder die Spalten werden falsch zugeordnet. Die Reihenfolge der Tabelle ist in der EU aber fest:
+     Fett, gesättigte, Kohlenhydrate, Zucker, (Ballaststoffe), Eiweiß, Salz. Passt die Zeilen-Zuordnung nicht zu den kcal, nehmen wir die Reihenfolge. */
+  const okSet=q=>q.fat!=null&&q.carb!=null&&q.prot!=null&&(q.sat==null||q.sat<=q.fat+0.05)&&(q.sugar==null||q.sugar<=q.carb+0.05)&&(q.fat+q.carb+q.prot+(q.fib||0)+(q.salt||0))<=101;
+  const kErr=q=>out.per.kcal?Math.abs(4*q.prot+4*q.carb+9*q.fat+2*(q.fib||0)-out.per.kcal)/out.per.kcal:0;
+  if(kc||out.per.kcal){const pos=kc?nut.indexOf(kc[0])+kc[0].length:0; const tail=nut.slice(pos).replace(/(pro|je|per|ø|\/)\s*100\s*(g|ml)/gi,' ');
+    const vals=[...tail.matchAll(/<?\s*(\d+(?:[.,]\d+)?)\s*(g|9)\b(?!\w)/gi)].map(m=>parseFloat(m[1].replace(',','.'))).filter(v=>v<=100);
+    const cand=[]; const mk=(a,fib)=>fib?{fat:a[0],sat:a[1],carb:a[2],sugar:a[3],fib:a[4],prot:a[5],salt:a[6]}:{fat:a[0],sat:a[1],carb:a[2],sugar:a[3],prot:a[4],salt:a[5]};
+    for(const step of [1,2])for(let off=0;off<3;off++){const seq=vals.filter((_,i)=>i>=off&&(i-off)%step===0); if(seq.length>=7)cand.push(mk(seq,true)); if(seq.length>=6)cand.push(mk(seq,false))}
+    const good=cand.filter(okSet).sort((a,b)=>kErr(a)-kErr(b))[0];
+    const rowOk=okSet(out.per)&&kErr(out.per)<0.15;
+    if(good&&kErr(good)<0.12&&(!rowOk||kErr(good)<kErr(out.per)-0.05)){LBL_KEYS.forEach(k=>{if(k!=='kcal')delete out.per[k]}); Object.assign(out.per,Object.fromEntries(Object.entries(good).filter(([,v])=>v!=null))); out.order=true}}
   const vre=/(vitamin\s*(a|c|d|e|k|b\s?1|b\s?2|b\s?6|b\s?12)|thiamin|riboflavin|fols[äa]ure|folat|calcium|magnesium|eisen|zink|kalium)\D{0,12}?(\d+(?:[.,]\d+)?)\s*(mg|µg|μg|ug|mcg)/gi; let m;
   const VMAP={a:'vA',c:'vC',d:'vD',e:'vE',k:'vK',b1:'b1',b2:'b2',b6:'b6',b12:'b12',thiamin:'b1',riboflavin:'b2',folsaure:'fol',folsäure:'fol',folat:'fol',calcium:'ca',magnesium:'mg',eisen:'fe',zink:'zn',kalium:'k'};
   while((m=vre.exec(nut))){const key=(m[2]?m[2].replace(/\s/g,''):m[1]).toLowerCase(); const nk=VMAP[key]; if(!nk||out.vit[nk]!=null)continue; let v=parseFloat(m[3].replace(',','.')); const u=m[4].toLowerCase(), want=NI[nk][1];
     if(u==='mg'&&want==='µg')v*=1000; else if(u!=='mg'&&want==='mg')v/=1000; out.vit[nk]=v}
-  const zi=low.search(/zutaten|ingredients/); if(zi>=0){let z=raw.slice(zi).replace(/^[^:]*:?\s*/,''); const stop=z.search(/\n\s*\n|kann spuren|n[äa]hrwert|durchschnittlich|mindestens haltbar|allergen|hergestellt|zu verbrauchen|gekühlt/i); if(stop>0)z=z.slice(0,stop); out.ingredients=z.replace(/\s*\n\s*/g,' ').replace(/\s+/g,' ').trim().replace(/\.$/,'')}
+  const zi=low.search(/zutaten|ingredients/); if(zi>=0){let z=raw.slice(zi).replace(/^[^:]*:?\s*/,'').replace(/([a-zäöüß])-\s*\n\s*([a-zäöüß])/g,'$1$2'); const stop=z.search(/\n\s*\n|\*\s*(aus|von|=)|kann\s[^.]{0,60}enthalten|kann spuren|kühl|trocken lagern|n[äa]hrwert|durchschnittlich|mindestens haltbar|allergen|hergestellt|zu verbrauchen|gekühlt/i); if(stop>0)z=z.slice(0,stop); out.ingredients=z.replace(/\s*\n\s*/g,' ').replace(/\s+/g,' ').trim().replace(/\.$/,'')}
+  if(zi>0){const before=raw.slice(0,zi).split('\n').map(l=>l.trim()).filter(l=>/[a-zäöü]{3}/i.test(l)); const nl=(before[before.length-1]||'').replace(/^\([^)]*\)\s*/,'').replace(/\s+/g,' ').trim(); if(nl.length>=4&&nl.length<=80)out.name=nl}
   const pm=low.match(/(?:portion|serving)[^\d\n]{0,20}(\d+(?:[.,]\d+)?)\s*(g|ml)/); if(pm)out.portion=parseFloat(pm[1].replace(',','.'));
   return out}
 function splitIngredients(s){const out=[]; let depth=0,cur='';
   for(const ch of String(s)){if('([{'.includes(ch))depth++; if(')]}'.includes(ch))depth=Math.max(0,depth-1); if((ch===','||ch===';')&&depth===0){out.push(cur);cur=''} else cur+=ch} out.push(cur);
   return out.map(x=>{const pct=x.match(/(\d+(?:[.,]\d+)?)\s*%/); const name=x.replace(/\([^)]*\)|\[[^\]]*\]/g,' ').replace(/\d+(?:[.,]\d+)?\s*%/g,' ').replace(/[*:.]/g,' ').replace(/\b(bio|aus|kontrolliert\w*|anbau|teilweise|gehärtet)\b/gi,' ').replace(/\s+/g,' ').trim(); return {name,pct:pct?parseFloat(pct[1].replace(',','.')):null}}).filter(x=>x.name.length>1)}
-const ADDITIVE=/^(e ?\d{3}|emulgator|säuerungsmittel|sauerungsmittel|aroma|natürliches aroma|antioxidationsmittel|stabilisator|verdickungsmittel|farbstoff|konservierungsstoff|backtriebmittel|trennmittel|geschmacksverstärker|feuchthaltemittel|überzugsmittel|süßungsmittel|jodsalz|salz|speisesalz|meersalz|steinsalz|wasser|trinkwasser|vitamin|eisen|zink|calcium|säureregulator|lecithin|zitronensäure|citronensäure|ascorbinsäure|hefeextrakt|gewürz|gewürze|kräuter|pfeffer|enzym)/i;
-function matchIngredient(name){const n=name.toLowerCase(); if(ADDITIVE.test(n))return null;
+const ADDITIVE=/^(e ?\d{3}|emulgator|säuerungsmittel|sauerungsmittel|aroma|natürliches aroma|antioxidationsmittel|stabilisator|verdickungsmittel|farbstoff|konservierungsstoff|backtriebmittel|trennmittel|geschmacksverstärker|feuchthaltemittel|überzugsmittel|süßungsmittel|jodsalz|salz|speisesalz|meersalz|steinsalz|wasser|trinkwasser|vitamin|eisen|zink|calcium|säureregulator|lecithin|backtriebmittel|ammonium|kalium|natrium|natron|zitronensäure|citronensäure|ascorbinsäure|hefeextrakt|gewürz|gewürze|kräuter|pfeffer|enzym|kurkuma|zimt|muskat|vanille|aroma)/i;
+function matchIngredient(name){const n=name.toLowerCase(); if(ADDITIVE.test(n)||/carbonat|phosphat|säure$|diphosphat|pektin|guarkern|xanthan|carrageen/.test(n))return null;
   const ok=x=>x.kind==='f'&&(x.id.startsWith('bls')||x.id.startsWith('ch')||F[x.id]);
   const stem=w=>w.replace(/(nen|en|e|n|s)$/,''); const words=name.split(' '); const main=words[words.length-1];
-  const qs=[...new Set([name,stem(name),main,stem(main)])].filter(q=>q.length>=3);
+  const suf=[]; for(let i=2;i<=main.length-4;i++)suf.push(main.slice(i)); /* zusammengesetzte Wörter: Rohrohrzucker → Rohrzucker → Zucker */
+  const qs=[...new Set([name,stem(name),main,stem(main),...suf])].filter(q=>q.length>=3);
   const seen=new Map(); qs.forEach((q,qi)=>searchLocal(q).filter(ok).forEach(x=>{const key=phon(stem(q)); const nm=phon(x.name);
-    const sc=x.r+qi*0.3+(new RegExp('^'+key+'\\w{0,3}(\\s|$)').test(nm)?0:nm.startsWith(key)?0.6:1.2)+(/[,(]/.test(x.name)?0.15:0)+x.name.length/80+(x.id.startsWith('bls')?0:0.1); if(!seen.has(x.id)||seen.get(x.id).sc>sc)seen.set(x.id,{x,sc})}));
+    const sc=x.r+Math.min(qi,4)*0.3+(qi>=4?(qi-4)*0.08:0)+(new RegExp('^'+key+'\\w{0,3}(\\s|$)').test(nm)?0:nm.startsWith(key)?0.6:1.2)+(/[,(]/.test(x.name)?0.15:0)+x.name.length/80+(x.id.startsWith('bls')?0:0.1); if(!seen.has(x.id)||seen.get(x.id).sc>sc)seen.set(x.id,{x,sc})}));
   const best=[...seen.values()].sort((a,b)=>a.sc-b.sc)[0]; if(!best)return null; const f=getFood(best.x.id); return f?{name:f.name,per:f.per,id:best.x.id}:null}
 /* Gewichte der Zutaten so wählen, dass sie die Nährwerte der Packung treffen (Reihenfolge und %-Angaben als Vorgabe) */
 function estimateMicros(ingText,per){
@@ -765,19 +778,36 @@ function estimateMicros(ingText,per){
   const T=[['prot',4],['carb',8],['fat',4],['fib',2],['sugar',5],['salt',0.4]].filter(([k])=>per[IDX[k]]!=null&&!isNaN(per[IDX[k]]));
   if(T.length>=3){for(let it=0;it<3000;it++){const pred=T.map(([k])=>used.reduce((s,x)=>s+x.w*x.m.per[IDX[k]]/100,0));
     used.forEach(x=>{if(x.pct!=null)return; let gr=0; T.forEach(([k,sc],j)=>{gr+=2*(pred[j]-per[IDX[k]])/(sc*sc)*x.m.per[IDX[k]]/100}); gr+=0.004*(x.w-x.w0); x.w=Math.max(0,x.w-0.5*gr)});
+    let cap=Infinity; used.forEach(x=>{if(x.pct!=null){cap=Math.min(cap,x.pct);return} x.w=Math.min(x.w,cap); cap=x.w}); /* Zutaten stehen nach Menge sortiert */
     const sum=used.reduce((s,x)=>s+x.w,0); if(sum>160)used.forEach(x=>{if(x.pct==null)x.w*=160/sum})}}
   const mic={}; MICRO.forEach(k=>{mic[k]=used.reduce((s,x)=>s+x.w*(x.m.per[IDX[k]]||0)/100,0)});
   const mac={}; ['kcal','prot','carb','sugar','fat','sat','fib','salt'].forEach(k=>{mac[k]=used.reduce((s,x)=>s+x.w*(x.m.per[IDX[k]]||0)/100,0)});
   return {mic,mac,list:ings.map(x=>({name:x.name,match:x.m?x.m.name:null,w:x.m?Math.round(x.w):null,pct:x.pct}))}}
+function nativeOCR(){try{return window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()&&Capacitor.Plugins&&Capacitor.Plugins.TextReader||null}catch(e){return null}}
+function blobB64(b){return new Promise((res,rej)=>{const r=new FileReader(); r.onload=()=>res(String(r.result)); r.onerror=rej; r.readAsDataURL(b)})}
+/* ML-Kit-Zeilen nach Höhe zu Tabellenzeilen zusammenfassen (links nach rechts) */
+function rowsFromLines(lines){const L=lines.filter(l=>l.y!=null).map(l=>({...l,cy:l.y+l.h/2})).sort((a,b)=>a.cy-b.cy); const rows=[];
+  for(const l of L){const r=rows.find(r=>Math.abs(r.cy-l.cy)<Math.max(r.h,l.h)*0.55); if(r){r.items.push(l)} else rows.push({cy:l.cy,h:l.h,items:[l]})}
+  return rows.map(r=>r.items.sort((a,b)=>a.x-b.x).map(i=>i.text).join(' ')).join('\n')}
+/* Für die Web-Texterkennung: größer, Graustufen, Kontrast strecken */
+function prepOCR(file){return new Promise(res=>{const img=new Image(); img.onload=()=>{const s=Math.min(2200/Math.max(img.width,img.height),2); const c=document.createElement('canvas'); c.width=Math.round(img.width*s); c.height=Math.round(img.height*s); const x=c.getContext('2d'); x.drawImage(img,0,0,c.width,c.height);
+  try{const d=x.getImageData(0,0,c.width,c.height), a=d.data, hist=new Uint32Array(256); for(let i=0;i<a.length;i+=4){const g=(a[i]*0.299+a[i+1]*0.587+a[i+2]*0.114)|0; a[i]=g; hist[g]++}
+    let lo=0,hi=255,acc=0,n=a.length/4; while(acc<n*0.02&&lo<254)acc+=hist[lo++]; acc=0; while(acc<n*0.02&&hi>1)acc+=hist[hi--]; const k=255/Math.max(1,hi-lo);
+    for(let i=0;i<a.length;i+=4){const g=Math.max(0,Math.min(255,(a[i]-lo)*k)); a[i]=a[i+1]=a[i+2]=g} x.putImageData(d,0,0)}catch(e){}
+  c.toBlob(b=>res(b||file),'image/jpeg',0.92); URL.revokeObjectURL(img.src)}; img.onerror=()=>res(file); img.src=URL.createObjectURL(file)})}
 function shrinkImage(file,max=1600){return new Promise(res=>{const img=new Image(); img.onload=()=>{const s=Math.min(1,max/Math.max(img.width,img.height)); const c=document.createElement('canvas'); c.width=Math.round(img.width*s); c.height=Math.round(img.height*s); c.getContext('2d').drawImage(img,0,0,c.width,c.height); c.toBlob(b=>res(b||file),'image/jpeg',0.85); URL.revokeObjectURL(img.src)}; img.onerror=()=>res(file); img.src=URL.createObjectURL(file)})}
 async function readLabel(files){
-  UI.labelState='Lese die Packung … das dauert ein paar Sekunden.'; render();
-  try{const imgs=await Promise.all(files.slice(0,3).map(f=>shrinkImage(f)));
-    let data=null; const caps=Store.sample?await Store.sample.limits().catch(()=>null):null;
-    if(caps&&caps.images){
+  UI.labelState='Lese die Packung … das dauert ein paar Sekunden.'; try{if(UI.labelImg)URL.revokeObjectURL(UI.labelImg); UI.labelImg=URL.createObjectURL(files[0])}catch(e){} render();
+  try{let data=null; const caps=Store.sample?await Store.sample.limits().catch(()=>null):null;
+    if(caps&&caps.images){const imgs=await Promise.all(files.slice(0,3).map(f=>shrinkImage(f)));
       const j=await Store.sample.json(`Du siehst Fotos einer Lebensmittelverpackung (deutsch oder andere Sprache). Lies die Nährwerttabelle (Werte je 100 g bzw. 100 ml, nicht je Portion) und die Zutatenliste ab. Antworte nur mit JSON: {"name": string (Produktname auf Deutsch), "brand": string, "per100": {"kcal": number|null, "fat": number|null, "sat": number|null, "carb": number|null, "sugar": number|null, "fib": number|null, "prot": number|null, "salt": number|null}, "ingredients": string (Zutatenliste auf Deutsch, mit %-Angaben wie gedruckt), "vitamins": {Schlüssel aus vA,vC,vD,vE,vK,b1,b2,b6,b12,fol,ca,mg,fe,zn,k: Wert je 100 g, Vitamin A/D/K/B12/Folat in µg, sonst mg; nur was auf der Packung steht}, "portion_g": number|null}. Erfinde nichts: was nicht lesbar ist, ist null.`,{images:imgs,modelTier:'default'});
       data={name:j.name||'',brand:j.brand||'',per:j.per100||{},ingredients:j.ingredients||'',vit:j.vitamins||{},portion:j.portion_g||null,via:'Claude'}}
+    else if(nativeOCR()){let text='';
+      for(let i=0;i<files.length&&i<3;i++){UI.labelState=`Lese Text${files.length>1?' (Bild '+(i+1)+')':''} …`; const el=document.getElementById('lblState'); if(el)el.textContent=UI.labelState;
+        const big=await shrinkImage(files[i],2400); const r=await nativeOCR().recognize({base64:await blobB64(big)}); text+='\n\n'+rowsFromLines(r.lines||[])+'\n\n'+(r.text||'')}
+      data=parseLabel(text); data.text=text; data.via='Texterkennung (Handy)'}
     else{await loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js'); let text='';
+      const imgs=await Promise.all(files.slice(0,3).map(f=>prepOCR(f)));
       for(let i=0;i<imgs.length;i++){const r=await Tesseract.recognize(imgs[i],'deu',{logger:m=>{if(m.status==='recognizing text'){UI.labelState=`Lese Text${imgs.length>1?' (Bild '+(i+1)+')':''} … ${Math.round(m.progress*100)} %`; const el=document.getElementById('lblState'); if(el)el.textContent=UI.labelState}}}); text+='\n\n'+r.data.text}
       data=parseLabel(text); data.text=text; data.via='Texterkennung'}
     UI.labelState=''; render(); UI.label=data; sheetLabel();
@@ -786,7 +816,8 @@ async function readLabel(files){
 function sheetLabel(){const d=UI.label; const p=d.per||{};
   const fld=(k)=>`<div class="field"><label for="lb-${k}">${NI[k][0]}</label><input id="lb-${k}" type="number" inputmode="decimal" step="any" min="0" value="${p[k]??''}" placeholder="${NI[k][1]}"></div>`;
   const vit=Object.keys(d.vit||{}).filter(k=>NI[k]);
-  openSheet(`<div class="stack"><div><div class="label">Packung gelesen · ${esc(d.via||'')}</div><h2 style="margin-top:4px">Bitte kurz prüfen</h2><div class="small muted">Alles ist änderbar. Werte je 100 g bzw. 100 ml.</div></div>
+  openSheet(`<div class="stack"><div><div class="label">Packung gelesen · ${esc(d.via||'')}</div><h2 style="margin-top:4px">Bitte kurz prüfen</h2><div class="small muted">Alles ist änderbar. Werte je 100 g bzw. 100 ml.${d.order?' Die Werte wurden nach der festen Reihenfolge der Nährwerttabelle zugeordnet.':''}</div></div>
+   ${UI.labelImg?`<details><summary class="small">Foto zum Vergleichen anzeigen</summary><img src="${UI.labelImg}" alt="Dein Foto der Packung" style="width:100%;border-radius:12px;margin-top:8px"></details>`:''}
    <div class="grid2"><div class="field"><label for="lb-name">Name</label><input id="lb-name" value="${esc(d.name||'')}" placeholder="z. B. Müsliriegel"></div><div class="field"><label for="lb-brand">Marke</label><input id="lb-brand" value="${esc(d.brand||'')}"></div></div>
    <div class="grid2">${LBL_KEYS.map(fld).join('')}</div>
    <div class="field"><label for="lb-portion">Packungsportion (g, optional)</label><input id="lb-portion" type="number" inputmode="decimal" min="0" value="${d.portion??''}"></div>
