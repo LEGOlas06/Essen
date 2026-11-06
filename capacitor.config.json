@@ -3,7 +3,7 @@
   "appName": "Tellerflamme",
   "webDir": "www",
   "android": {
-    "backgroundColor": "#140a2e"
+    "backgroundColor": "#0f1115"
   },
   "plugins": {
     "CapacitorUpdater": {
