@@ -6,6 +6,11 @@
 <meta name="theme-color" content="#0f1115">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tellerflamme">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font-size:14px;font-family:system-ui,sans-serif}img{max-width:100%}</style>
 <title>Tellerflamme</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -195,7 +200,7 @@ nav.tabs button.add svg{background:var(--accent);width:36px;height:36px;padding:
 
 </head>
 <body>
-<noscript><div style="padding:24px;font-family:sans-serif;font-size:16px">Diese Ansicht führt keine Skripte aus. Bitte öffne die Datei in <b>Chrome</b> oder <b>Samsung Internet</b> (Datei antippen → „Öffnen mit“).</div></noscript>
+<noscript><div style="padding:24px;font-family:sans-serif;font-size:16px">Diese Ansicht führt keine Skripte aus. Bitte öffne die Seite in <b>Chrome</b>, <b>Samsung Internet</b> oder <b>Safari</b>.</div></noscript>
 <div class="wrap">
   <header class="top">
     <div class="brand"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="var(--flame)" d="M12 2c1 3.2 5.5 5.6 5.5 11a5.5 5.5 0 0 1-11 0c0-2.6 1.4-4.3 2.6-5.4.2 1.7 1 2.9 2.2 3.4C10.8 8 11.5 5 12 2z"/></svg>Tellerflamme</div>
@@ -1187,6 +1192,7 @@ function vMehr(){const g=S.settings;
   <section class="card stack" style="gap:10px"><h3>Tagesziele</h3><div class="small muted">Vom Rechner ausgefüllt oder selbst eingetragen.</div><div class="grid2">${f('kcal','Kalorien','kcal')}${f('prot','Eiweiß','g')}${f('carb','Kohlenhydrate','g')}${f('fat','Fett','g')}${f('fib','Ballaststoffe','g')}${f('waterGoal','Trinken','ml')}</div>
    <label class="row small"><input type="checkbox" id="g-waterFood" style="width:auto" ${S.settings.waterFood!==false?'checked':''}> Wasser aus dem Essen (Obst, Suppe, Joghurt …) vom Trinkziel abziehen. Das Trinkziel oben ist dann der Gesamtbedarf.</label>
    <button class="primary" data-act="savegoals">Ziele speichern</button></section>
+  ${appCard()}
   <section class="card stack" style="gap:8px"><h3>So funktioniert der Streak</h3><div class="small">Jeder Tag mit mindestens einem Eintrag zählt. Nach je 7 Tagen am Stück bekommst du einen Freeze (höchstens 2). Verpasst du einen Tag, springt automatisch ein Freeze ein und dein Streak bleibt. Abzeichen gibt es bei 3, 7, 14, 30, 50, 100, 200 und 365 Tagen.</div></section>
   ${nativeHealth()?`<section class="card stack" style="gap:8px"><h3>Samsung Health live</h3><div class="small">Über Health Connect holt die App deine Aktivkalorien und dein Gewicht automatisch, jedes Mal wenn du sie öffnest. In Samsung Health muss dafür unter Einstellungen → Health Connect das Teilen eingeschaltet sein.</div>
    <button class="primary" data-act="hc">${g.hcSync?'Jetzt synchronisieren':'Mit Health Connect verbinden'}</button>${g.hcLast?`<div class="tiny muted">Zuletzt: ${new Date(g.hcLast).toLocaleString('de-DE')}</div>`:''}</section>`:''}
@@ -1228,6 +1234,7 @@ document.addEventListener('click',async ev=>{
     case 'mquick':UI.sel[+el.dataset.i].a.amt=+el.dataset.v;sheetMulti();break;
     case 'mdel':UI.sel.splice(+el.dataset.i,1); if(!UI.sel.length){closeSheet();render()} else sheetMulti();break;
     case 'maddall':addAll();break;
+    case 'updcheck':checkUpdate(true);break;
     case 'donemeal':UI.tab='heute';UI.q='';window.scrollTo(0,0);render();break;
     case 'water':{const b=S.body[UI.date]=S.body[UI.date]||{}; b.water=Math.max(0,(b.water||0)+(+el.dataset.ml)); if(!b.water)delete b.water; if(!Object.keys(b).length)delete S.body[UI.date]; Store.saveMeta(); render(); const g=drinkGoal(UI.date); if(+el.dataset.ml>0&&b.water>=g&&b.water-(+el.dataset.ml)<g)toast('Trinkziel geschafft!'); break}
     case 'meal':UI.meal=el.dataset.meal;render();break;
@@ -1298,15 +1305,26 @@ setInterval(()=>{if(UI.date>today()||(UI.lastToday&&UI.lastToday!==today()&&UI.d
 const APP_VERSION='__APP_VERSION__', UPD_BASE='https://legolas06.github.io/Essen/';
 function updater(){try{return window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()&&Capacitor.Plugins&&Capacitor.Plugins.CapacitorUpdater||null}catch(e){return null}}
 let updBusy=false, updLast=0, updId=null;
+function appCard(){const nat=!!updater(); const v=APP_VERSION.startsWith('__')?'Entwicklungsversion':APP_VERSION;
+  return `<section class="card stack" style="gap:10px"><h3>App und Updates</h3>
+   <div class="kv"><span class="muted">Version</span><span class="num">${esc(v)}</span><span class="muted">Läuft als</span><span>${nat?'Android-App':window.claude&&window.claude.use?'Claude-Artefakt':navigator.standalone||matchMedia('(display-mode: standalone)').matches?'Home-Bildschirm-App':'Webseite'}</span></div>
+   ${nat?`<button data-act="updcheck" ${updBusy?'disabled':''}>Nach Update suchen</button>`:'<div class="tiny muted">Die Web-Version ist immer automatisch aktuell. Bei Bedarf einfach neu laden.</div>'}
+   ${UI.updState?`<div class="note" role="status">${esc(UI.updState)}</div>`:''}</section>`}
 function updBar(){let el=document.getElementById('updBar'); if(!updId){if(el)el.remove();return}
   if(!el){el=document.createElement('div'); el.id='updBar'; el.className='selbar'; el.style.bottom='auto'; el.style.top='calc(10px + env(safe-area-inset-top,0px))'; document.body.appendChild(el)}
   el.innerHTML='<span>Neue Version bereit</span><button class="primary sm" id="updNow">Jetzt aktualisieren</button>'; document.getElementById('updNow').onclick=async()=>{try{await Store.saveMeta()}catch(e){} try{await updater().set({id:updId})}catch(e){toast('Update kommt beim nächsten Start.')}}}
-async function checkUpdate(force){const U=updater(); if(!U||updBusy||APP_VERSION.startsWith('__'))return; if(!force&&Date.now()-updLast<20*60*1000)return; updBusy=true; updLast=Date.now();
-  try{const v=await (await fetch(UPD_BASE+'version.json?t='+Date.now(),{cache:'no-store'})).json(); if(!v||!v.version||v.version===APP_VERSION||updId)return;
-    const b=await U.download({url:UPD_BASE+'update.zip?v='+v.version,version:v.version}); await U.next({id:b.id}); updId=b.id; updBar()}catch(e){}finally{updBusy=false}}
+async function checkUpdate(force){const U=updater(); if(!U||updBusy)return; if(APP_VERSION.startsWith('__')){if(force){UI.updState='Diese Version hat keine Versionsnummer, Updates gehen erst ab der nächsten APK.';render()}return}
+  if(!force&&Date.now()-updLast<20*60*1000)return; updBusy=true; updLast=Date.now(); const say=t=>{UI.updState=t; if(UI.tab==='mehr')render()};
+  try{say('Suche nach Updates …'); const r=await fetch(UPD_BASE+'version.json?t='+Date.now(),{cache:'no-store'}); if(!r.ok)throw new Error('Server antwortet mit '+r.status); const v=await r.json();
+    if(!v||!v.version)throw new Error('Keine Versionsangabe');
+    if(v.version===APP_VERSION){say('Du hast die neueste Version ('+APP_VERSION+').');return}
+    if(updId){say('Update '+v.version+' ist schon geladen. Tipp oben auf „Jetzt aktualisieren“.');return}
+    say('Lade Version '+v.version+' …'); const b=await U.download({url:UPD_BASE+'update.zip?v='+v.version,version:v.version}); await U.next({id:b.id}); updId=b.id; updBar(); say('Version '+v.version+' ist geladen. Tipp oben auf „Jetzt aktualisieren“ oder starte die App neu.')}
+  catch(e){say('Update fehlgeschlagen: '+(e&&e.message||e))}finally{updBusy=false; if(UI.tab==='mehr')render()}}
 (function(){const U=updater(); if(U){try{U.notifyAppReady()}catch(e){} setTimeout(()=>checkUpdate(true),3000); document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkUpdate(false)})}})();
 loadLocal(); UI.lastToday=today(); render(); connectCloud(); if(S.settings.hcSync)setTimeout(()=>syncHealth(false),800);
 </script>
 
+<script>if("serviceWorker" in navigator&&location.protocol==="https:"&&!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()))navigator.serviceWorker.register("sw.js").catch(()=>{})</script>
 </body>
 </html>
