@@ -1,0 +1,23 @@
+vorrat_setzen:
+  fields:
+    name:
+      required: true
+      example: Milch
+      selector:
+        text:
+    status:
+      required: false
+      default: da
+      selector:
+        select:
+          options:
+            - da
+            - wenig
+            - leer
+vorrat_entfernen:
+  fields:
+    name:
+      required: true
+      example: Milch
+      selector:
+        text:

@@ -1,0 +1,66 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Tellerflamme",
+        "description": "Creates the pantry, a shopping list and sensors for the Tellerflamme app. Then enter the address and an access token in the app under “Ziele” → “Home Assistant”."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Tellerflamme is already set up."
+    }
+  },
+  "entity": {
+    "todo": {
+      "vorrat": {
+        "name": "Pantry"
+      },
+      "einkauf": {
+        "name": "Shopping list"
+      }
+    },
+    "sensor": {
+      "vorrat_anzahl": {
+        "name": "Pantry"
+      },
+      "rezeptvorschlag": {
+        "name": "Recipe suggestion"
+      },
+      "kalorien_heute": {
+        "name": "Calories today"
+      },
+      "streak": {
+        "name": "Streak"
+      },
+      "vitaminluecken": {
+        "name": "Nutrient gaps"
+      }
+    }
+  },
+  "services": {
+    "vorrat_setzen": {
+      "name": "Set pantry item",
+      "description": "Sets a pantry item to da (available), wenig (running low) or leer (empty). Creates it if missing.",
+      "fields": {
+        "name": {
+          "name": "Name",
+          "description": "Food name"
+        },
+        "status": {
+          "name": "Status",
+          "description": "da, wenig or leer"
+        }
+      }
+    },
+    "vorrat_entfernen": {
+      "name": "Remove pantry item",
+      "description": "Removes an item from the pantry.",
+      "fields": {
+        "name": {
+          "name": "Name",
+          "description": "Food name"
+        }
+      }
+    }
+  }
+}
