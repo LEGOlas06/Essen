@@ -1,0 +1,6 @@
+{
+  "appId": "io.github.legolas06.tellerflamme",
+  "appName": "Tellerflamme",
+  "webDir": "www",
+  "android": { "backgroundColor": "#140a2e" }
+}
