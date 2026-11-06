@@ -44,6 +44,12 @@ if (!x.includes('READ_ACTIVE_CALORIES_BURNED')) {
   x = x.replace(/<\/application>/, acts + '    </application>');
   fs.writeFileSync(mf, x);
 }
+// Home Assistant im Heim-WLAN läuft meist über http (z. B. http://homeassistant.local:8123)
+x = fs.readFileSync(mf, 'utf8');
+if (!x.includes('usesCleartextTraffic')) {
+  x = x.replace(/<application\b/, '<application android:usesCleartextTraffic="true"');
+  fs.writeFileSync(mf, x);
+}
 // Widget und eigene Java-Dateien (überschreibt MainActivity)
 fs.cpSync('android-extra', 'android', { recursive: true });
 const vg = 'android/variables.gradle';

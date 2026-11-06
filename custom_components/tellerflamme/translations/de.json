@@ -1,0 +1,66 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Tellerflamme",
+        "description": "Legt den Vorrat, eine Einkaufsliste und Sensoren für die Tellerflamme-App an. Danach in der App unter „Ziele“ → „Home Assistant“ Adresse und Zugangs-Token eintragen."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Tellerflamme ist schon eingerichtet."
+    }
+  },
+  "entity": {
+    "todo": {
+      "vorrat": {
+        "name": "Vorrat"
+      },
+      "einkauf": {
+        "name": "Einkaufsliste"
+      }
+    },
+    "sensor": {
+      "vorrat_anzahl": {
+        "name": "Vorrat"
+      },
+      "rezeptvorschlag": {
+        "name": "Rezeptvorschlag"
+      },
+      "kalorien_heute": {
+        "name": "Kalorien heute"
+      },
+      "streak": {
+        "name": "Streak"
+      },
+      "vitaminluecken": {
+        "name": "Vitaminlücken"
+      }
+    }
+  },
+  "services": {
+    "vorrat_setzen": {
+      "name": "Vorrat setzen",
+      "description": "Setzt ein Lebensmittel im Vorrat auf da, fast leer (wenig) oder leer. Gibt es es noch nicht, wird es angelegt.",
+      "fields": {
+        "name": {
+          "name": "Name",
+          "description": "Name des Lebensmittels"
+        },
+        "status": {
+          "name": "Status",
+          "description": "da, wenig (fast leer) oder leer"
+        }
+      }
+    },
+    "vorrat_entfernen": {
+      "name": "Aus Vorrat entfernen",
+      "description": "Entfernt ein Lebensmittel ganz aus dem Vorrat.",
+      "fields": {
+        "name": {
+          "name": "Name",
+          "description": "Name des Lebensmittels"
+        }
+      }
+    }
+  }
+}

@@ -377,7 +377,7 @@ const MILES=[3,7,14,30,50,100,200,365];
 
 /* ---------- Zustand & Speicher ---------- */
 const DEF_SETTINGS={kcal:2200,prot:100,carb:260,fat:75,fib:30,sex:'m',age:'',height:'',weight:'',pal:1.4,goal:'keep',rate:0.5,strength:false,useBurn:false,burnFactor:0.7,fdcKey:'',waterGoal:2500};
-let S={settings:{...DEF_SETTINGS},foods:{},recipes:{},days:{},body:{}};
+let S={settings:{...DEF_SETTINGS},foods:{},recipes:{},days:{},body:{},vorrat:{}};
 let UI={tab:'heute',date:today(),meal:guessMeal(),q:'',range:30,online:[],usda:[],onlineState:'',usdaState:'',scanning:false};
 const LS='tellerflamme.v1';
 const Store={mode:'local',db:null,base:null,dl:null,sample:null,
@@ -386,10 +386,10 @@ const Store={mode:'local',db:null,base:null,dl:null,sample:null,
     const ref=this.db.collection(this.base).doc('day-'+d);
     try{ if(S.days[d]&&S.days[d].length) await ref.set({date:d,entries:S.days[d]}); else await ref.delete(); }catch(e){toast('Speichern fehlgeschlagen: '+(e.message||e.code))}},
   async saveMeta(){this.saveLocal(); if(this.mode!=='db')return;
-    try{await this.db.collection(this.base).doc('meta').set({settings:S.settings,foods:S.foods,recipes:S.recipes,body:S.body})}catch(e){toast('Speichern fehlgeschlagen: '+(e.message||e.code))}},
+    try{await this.db.collection(this.base).doc('meta').set({settings:S.settings,foods:S.foods,recipes:S.recipes,body:S.body,vorrat:S.vorrat||{}})}catch(e){toast('Speichern fehlgeschlagen: '+(e.message||e.code))}},
   async saveAll(){await this.saveMeta(); for(const d of Object.keys(S.days)) await this.saveDay(d)}
 };
-function loadLocal(){try{const t=localStorage.getItem(LS); if(t){const o=JSON.parse(t); S={settings:{...DEF_SETTINGS,...(o.settings||{})},foods:o.foods||{},recipes:o.recipes||{},days:o.days||{},body:o.body||{}}}}catch(e){}}
+function loadLocal(){try{const t=localStorage.getItem(LS); if(t){const o=JSON.parse(t); S={settings:{...DEF_SETTINGS,...(o.settings||{})},foods:o.foods||{},recipes:o.recipes||{},days:o.days||{},body:o.body||{},vorrat:o.vorrat||{}}}}catch(e){}}
 async function connectCloud(){
   if(!window.claude||!window.claude.use)return;
   try{
@@ -401,8 +401,8 @@ async function connectCloud(){
     Store.db=db; Store.base='data/users/'+uid;
     const snap=await db.collection(Store.base).get();
     if(snap.empty){ Store.mode='db'; if(Object.keys(S.days).length||Object.keys(S.foods).length||Object.keys(S.body).length) await Store.saveAll(); render(); return; }
-    const n={settings:{...DEF_SETTINGS},foods:{},recipes:{},days:{},body:{}};
-    snap.docs.forEach(doc=>{const v=doc.data(); if(doc.id==='meta'){n.settings={...DEF_SETTINGS,...(v.settings||{})};n.foods=v.foods||{};n.recipes=v.recipes||{};n.body=v.body||{}} else if(v&&v.date) n.days[v.date]=v.entries||[]});
+    const n={settings:{...DEF_SETTINGS},foods:{},recipes:{},days:{},body:{},vorrat:{}};
+    snap.docs.forEach(doc=>{const v=doc.data(); if(doc.id==='meta'){n.settings={...DEF_SETTINGS,...(v.settings||{})};n.foods=v.foods||{};n.recipes=v.recipes||{};n.body=v.body||{};n.vorrat=v.vorrat||{}} else if(v&&v.date) n.days[v.date]=v.entries||[]});
     S=n; Store.mode='db'; Store.saveLocal(); render();
   }catch(e){console.warn(e)}
 }
@@ -905,6 +905,7 @@ function vRezepte(){
   const row=r=>{const c=recipeCalc(r);return `<button class="item" data-act="recipe" data-id="${r.id}"><div class="grow"><div class="nm">${esc(r.name)}${r.fav?' <span class="tag empf">Favorit</span>':''}</div><div class="pfc">E ${fmt(c.per[1])} g · K ${fmt(c.per[2])} g · F ${fmt(c.per[4])} g</div></div><div style="text-align:right"><div class="kc">${Math.round(c.per[0])} kcal</div><div class="tiny muted">je ${r.unit}</div></div></button>`};
   const sec=(t,arr)=>arr.length?`<section class="card"><div class="label">${t}</div><div class="list">${arr.map(row).join('')}</div></section>`:'';
   return `<div class="stack"><h2>Rezepte</h2>
+  ${vorratCard()}
   <section class="card stack" style="gap:10px"><h3>Rezeptidee</h3>
    ${Store.sample?`<div class="small muted">Claude schlägt ein Rezept aus Zutaten der App-Datenbank vor. Die Nährwerte rechnet die App selbst aus.</div>
    <input id="idea" placeholder="Wunsch, z. B. vegetarisch, viel Eiweiß, unter 600 kcal" value="${esc(UI.idea||'')}">
@@ -1078,7 +1079,7 @@ function summaryText(){
 async function copySummary(){const t=summaryText(); try{await navigator.clipboard.writeText(t);toast('Kopiert. Jetzt im Chat einfügen.')}catch(e){openSheet(`<div class="stack"><h2>Zusammenfassung</h2><div class="small muted">Kopieren klappt hier nicht automatisch. Markiere den Text und kopiere ihn.</div><textarea rows="12" id="sumtxt" readonly>${esc(t)}</textarea><button data-act="close">Schließen</button></div>`);setTimeout(()=>document.getElementById('sumtxt')?.select(),50)}}
 async function importJSON(file){
   try{const o=JSON.parse(await file.text()); if(!o||!o.days)throw 0;
-    Object.assign(S.foods,o.foods||{}); Object.assign(S.recipes,o.recipes||{}); if(o.settings)S.settings={...S.settings,...o.settings};
+    Object.assign(S.foods,o.foods||{}); Object.assign(S.recipes,o.recipes||{}); S.vorrat=Object.assign(S.vorrat||{},o.vorrat||{}); if(o.body)S.body=Object.assign(S.body||{},o.body); if(o.settings)S.settings={...S.settings,...o.settings};
     let n=0; for(const d of Object.keys(o.days)){if(Array.isArray(o.days[d])){S.days[d]=o.days[d];n++}}
     await Store.saveAll(); toast(`Backup geladen: ${n} Tage`); render();
   }catch(e){toast('Diese Datei ist kein Tellerflamme-Backup.')}
@@ -1193,6 +1194,7 @@ function vMehr(){const g=S.settings;
    <label class="row small"><input type="checkbox" id="g-waterFood" style="width:auto" ${S.settings.waterFood!==false?'checked':''}> Wasser aus dem Essen (Obst, Suppe, Joghurt …) vom Trinkziel abziehen. Das Trinkziel oben ist dann der Gesamtbedarf.</label>
    <button class="primary" data-act="savegoals">Ziele speichern</button></section>
   ${appCard()}
+  ${haCard()}
   <section class="card stack" style="gap:8px"><h3>So funktioniert der Streak</h3><div class="small">Jeder Tag mit mindestens einem Eintrag zählt. Nach je 7 Tagen am Stück bekommst du einen Freeze (höchstens 2). Verpasst du einen Tag, springt automatisch ein Freeze ein und dein Streak bleibt. Abzeichen gibt es bei 3, 7, 14, 30, 50, 100, 200 und 365 Tagen.</div></section>
   ${nativeHealth()?`<section class="card stack" style="gap:8px"><h3>Samsung Health live</h3><div class="small">Über Health Connect holt die App deine Aktivkalorien und dein Gewicht automatisch, jedes Mal wenn du sie öffnest. In Samsung Health muss dafür unter Einstellungen → Health Connect das Teilen eingeschaltet sein.</div>
    <button class="primary" data-act="hc">${g.hcSync?'Jetzt synchronisieren':'Mit Health Connect verbinden'}</button>${g.hcLast?`<div class="tiny muted">Zuletzt: ${new Date(g.hcLast).toLocaleString('de-DE')}</div>`:''}</section>`:''}
@@ -1211,7 +1213,7 @@ function vMehr(){const g=S.settings;
    <div class="small muted">Zwischen der claude.ai-Ansicht und der Handy-Datei überträgst du Daten mit Backup (JSON) und „Backup laden“.</div></section>
   <section class="card stack" style="gap:8px"><h3>Datenquellen</h3><div class="small muted">Eigene Datenbank mit ${Object.keys(F).length} Lebensmitteln (Richtwerte nach USDA/BLS, gerundet). Dazu ${CH.length} Lebensmittel aus der Schweizer Nährwertdatenbank V 7.1 (Bundesamt für Lebensmittelsicherheit und Veterinärwesen BLV, naehrwertdaten.ch; ohne Vitamin K). Und ${BLS.length} Lebensmittel und Gerichte aus dem Bundeslebensmittelschlüssel BLS 4.0: Max Rubner-Institut (2025), Lizenz CC BY 4.0. Gescannte Produkte von Open Food Facts (offene Datenbank, Werte von Nutzern eingetragen). Referenzwerte nach DGE; Vitamin D gilt für den Fall ohne Sonne. Online-Suche zusätzlich in der USDA FoodData Central (US-Landwirtschaftsministerium, sehr vollständige Mikronährstoffe, englische Namen; deutsche Suchwörter werden für häufige Lebensmittel übersetzt).</div>
    <div class="field"><label for="g-fdc">Eigener USDA-Schlüssel (optional, kostenlos auf api.data.gov)</label><div class="row"><input id="g-fdc" value="${esc(g.fdcKey||'')}" placeholder="leer = Demo-Schlüssel (ca. 30 Suchen pro Stunde)"><button class="sm" data-act="savefdc">Speichern</button></div></div></section>
-  <section class="card stack" style="gap:8px"><h3>Alles löschen</h3><div class="small muted">Löscht alle Einträge, eigenen Lebensmittel und Rezepte. Mach vorher ein Backup.</div>
+  <section class="card stack" style="gap:8px"><h3>Alles löschen</h3><div class="small muted">Löscht alle Einträge, eigenen Lebensmittel, Rezepte und den Vorrat. Mach vorher ein Backup.${haOn()?' Mit Home Assistant wird auf allen Geräten gelöscht.':''}</div>
    ${UI.confirmReset?'<div class="row"><button data-act="reset-yes" style="color:var(--low)">Ja, alles löschen</button><button data-act="reset-no">Abbrechen</button></div>':'<button data-act="reset">Alle Daten löschen …</button>'}</section></div>`;
 }
 
@@ -1276,7 +1278,7 @@ document.addEventListener('click',async ev=>{
     case 'health':document.getElementById('healthFile').click();break;
     case 'reset':UI.confirmReset=true;render();break;
     case 'reset-no':UI.confirmReset=false;render();break;
-    case 'reset-yes':{const old=Object.keys(S.days); S={settings:{...S.settings},foods:{},recipes:{},days:{}}; UI.confirmReset=false;
+    case 'reset-yes':{const old=Object.keys(S.days); S={settings:{...S.settings},foods:{},recipes:{},days:{},body:{},vorrat:{}}; UI.confirmReset=false;
       if(Store.mode==='db'){try{for(const d of old)await Store.db.collection(Store.base).doc('day-'+d).delete()}catch(e){}} await Store.saveMeta(); render(); toast('Alle Daten gelöscht'); break}
   }
 });
@@ -1301,6 +1303,149 @@ document.getElementById('labelImg').addEventListener('change',e=>{const f=[...e.
 document.getElementById('barcodeImg').addEventListener('change',e=>{const f=e.target.files[0]; if(f)scanPhoto(f); e.target.value=''});
 setInterval(()=>{if(UI.date>today()||(UI.lastToday&&UI.lastToday!==today()&&UI.date===UI.lastToday)){UI.date=today();render()} UI.lastToday=today()},60000);
 
+/* ---------- Vorrat, Vorschläge nach Vitaminlücken, Abgleich über Home Assistant ---------- */
+const VST=[['da','da'],['wenig','fast leer'],['leer','leer']];
+const STAPLE=new Set(['rapsoel','olivenoel','essig','senf','bruehe','zucker','sojasauce']);
+function shortName(n){return String(n||'').split(',')[0].replace(/\s*\([^)]*\)/g,'').trim()}
+function vItems(){return Object.entries(S.vorrat||{}).map(([id,v])=>({id,...v})).sort((a,b)=>String(a.name).localeCompare(String(b.name),'de'))}
+function vWords(name){return phon(String(name||'')).split(/\s+/).filter(w=>w.length>=2).map(w=>{const a=new Set([w,...(SYN[w]||[])]); if(w==='eier')a.add('ei'); if(w.length>4){if(/en$/.test(w)){a.add(w.slice(0,-1));a.add(w.slice(0,-2))} else if(/[ns]$/.test(w))a.add(w.slice(0,-1))} return [...a]})}
+function nameHas(foodName,ws){if(!ws.length)return false; const key=pkey(String(foodName).split(',')[0]); return ws.every(alts=>alts.some(a=>a.length<4?key.includes(' '+a+' '):a.length>=5?key.includes(a):key.includes(' '+a)))}
+/* Passt ein Vorrat-Eintrag zu einem Lebensmittel? Erst über die verknüpfte ID, sonst über den Namen. */
+function vMatch(it,fid){if(it.food&&it.food===fid)return true; const f=getFood(fid); return !!f&&nameHas(f.name,it._ws||(it._ws=vWords(it.name)))}
+function vFoodOf(it){if(it.food&&getFood(it.food))return it.food; const ws=vWords(it.name); let best=null; for(const id of Object.keys(F)){if(nameHas(F[id][0],ws)&&(!best||F[id][0].length<F[best][0].length))best=id} return best}
+/* Lücken: Durchschnitt der letzten 7 Tage mit Einträgen, ohne den angefangenen heutigen Tag */
+function microGaps(){const t0=today(); let ds=Object.keys(S.days).filter(d=>S.days[d]&&S.days[d].length&&d<t0).sort().slice(-7); if(!ds.length)ds=(S.days[t0]||[]).length?[t0]:[];
+  const ref=REF[S.settings.sex]; if(!ds.length)return {days:0,list:[]}; const t=zero(); ds.forEach(d=>addTo(t,dayTotals(d)));
+  return {days:ds.length,list:MICRO.map(k=>({k,name:NI[k][0],pct:Math.round(t[IDX[k]]/ds.length/ref[k]*100)})).sort((a,b)=>a.pct-b.pct)}}
+function gapHelp(per,gaps,f){const ref=REF[S.settings.sex]; let score=0; const helps=[];
+  gaps.list.forEach(g=>{if(g.pct>=100)return; const need=(100-g.pct)/100, got=(per[IDX[g.k]]||0)*f/ref[g.k]; score+=Math.min(got,need)*(1+need); if(got>=0.15)helps.push([g.name,got])});
+  return {score,helps:helps.sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0])}}
+function suggest(){const items=vItems().filter(it=>it.st!=='leer'); const gaps=microGaps(); const out={gaps,recipes:[],foods:[]}; if(!items.length)return out;
+  allRecipes().forEach(r=>{const fids=[...new Set(r.ing.map(x=>x[0]))].filter(id=>!STAPLE.has(id)); if(!fids.length)return;
+    let have=0; const missing=[]; fids.forEach(id=>{if(items.some(it=>vMatch(it,id)))have++; else{const f=getFood(id); missing.push(f?shortName(f.name):id)}});
+    if(!have||missing.length>2)return; const c=recipeCalc(r); const h=gapHelp(c.per,gaps,1);
+    out.recipes.push({id:r.id,name:r.name,missing,have,total:fids.length,helps:h.helps,score:h.score,kcal:Math.round(c.per[0])})});
+  out.recipes.sort((a,b)=>a.missing.length-b.missing.length||b.score-a.score||b.have-a.have);
+  const seen=new Set(); items.forEach(it=>{const id=vFoodOf(it); if(!id||seen.has(id))return; seen.add(id); const f=getFood(id); if(!f)return; const h=gapHelp(f.per,gaps,1); if(h.helps.length)out.foods.push({name:it.name,helps:h.helps,score:h.score})});
+  out.foods.sort((a,b)=>b.score-a.score); return out}
+function vorratCard(){const items=vItems(), n=items.filter(i=>i.st!=='leer').length; const sg=suggest(); const low=sg.gaps.list.filter(g=>g.pct<100).slice(0,3);
+  const rows=sg.recipes.slice(0,6).map(s=>`<button class="item" data-act="recipe" data-id="${s.id}"><div class="grow"><div class="nm">${esc(s.name)}</div><div class="pfc">${s.missing.length?'Fehlt: '+esc(s.missing.join(', ')):'Alles da'}${s.helps.length?' · gut für '+esc(s.helps.join(', ')):''}</div></div><div style="text-align:right"><div class="kc">${s.kcal} kcal</div><div class="tiny muted">je Portion</div></div></button>`).join('');
+  return `<section class="card stack" style="gap:10px"><div class="row" style="justify-content:space-between"><h3>Aus deinem Vorrat</h3><button class="sm" data-act="vorrat">Vorrat (${n})</button></div>
+   ${!items.length?'<div class="small muted">Trag ein, was du daheim hast. Dann zeigt die App hier, was du damit kochen kannst und was gegen deine Vitaminlücken hilft.</div>':''}
+   ${low.length?`<div class="small">Am meisten fehlt dir ${sg.gaps.days>1?`im Schnitt der letzten ${sg.gaps.days} Tage`:'zuletzt'}: ${low.map(g=>`<b>${esc(g.name)}</b> (${g.pct} %)`).join(', ')}.</div>`:''}
+   ${rows?`<div class="list">${rows}</div>`:items.length?'<div class="small muted">Noch kein Rezept, für das höchstens zwei Zutaten fehlen. Trag mehr in den Vorrat ein oder leg eigene Rezepte an.</div>':''}
+   ${sg.foods.length?`<div class="small"><span class="muted">Iss dazu aus dem Vorrat:</span> ${sg.foods.slice(0,4).map(f=>`<b>${esc(f.name)}</b> (${esc(f.helps.slice(0,2).join(', '))})`).join(' · ')}</div>`:''}
+   ${items.length?'<div class="tiny muted">Öl, Essig, Senf, Brühe, Zucker und Sojasauce zählen als immer da.</div>':''}
+   ${haOn()?`<div class="tiny muted">Mit Home Assistant abgeglichen${HA.st.last?' · '+new Date(HA.st.last).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):''}</div>`:''}</section>`}
+function sheetVorrat(){UI.vorratOpen=true; drawVorrat()}
+function drawVorrat(){const items=vItems(); const q=(UI.vq||'').trim();
+  const hits=q?searchLocal(q).filter(x=>x.kind==='f').slice(0,6):[];
+  const row=it=>`<div class="entry" style="${it.st==='leer'?'opacity:.55':''}"><div class="grow"><div>${esc(it.name)}</div></div><div class="seg" role="group" aria-label="Status ${esc(it.name)}" style="flex:0 0 auto">${VST.map(([k,l])=>`<button class="${it.st===k?'on':''}" data-act="vst" data-id="${esc(it.id)}" data-st="${k}" style="padding:6px 8px;font-size:12px">${l}</button>`).join('')}</div><button class="ghost" data-act="vdel" data-id="${esc(it.id)}" aria-label="${esc(it.name)} entfernen">✕</button></div>`;
+  openSheet(`<div class="stack"><h2>Vorrat</h2><div class="small muted">Was ist daheim? „fast leer“ und „leer“ landen${haOn()?' in Home Assistant':''} auf der Einkaufsliste.</div>
+   <input id="vq" type="search" placeholder="Lebensmittel hinzufügen, z. B. Spinat" value="${esc(UI.vq||'')}" autocomplete="off">
+   ${q?`<div class="list">${hits.map(h=>`<button class="item" data-act="vaddf" data-id="${esc(h.id)}"><div class="grow"><div class="nm">${esc(h.name)}</div></div><span class="tiny muted">hinzufügen</span></button>`).join('')}<button class="item" data-act="vaddn"><div class="grow"><div class="nm">„${esc(q)}“ als eigenen Eintrag</div></div></button></div>`:''}
+   <div class="list">${items.map(row).join('')||'<div class="empty">Noch nichts im Vorrat.</div>'}</div>
+   <button data-act="vclose">Fertig</button></div>`);
+  if(UI.vFocus){const i=document.getElementById('vq'); if(i){i.focus(); i.setSelectionRange(i.value.length,i.value.length)} UI.vFocus=false}}
+function vSave(){Store.saveMeta()}
+function vAddItem(name,food){name=String(name||'').trim(); if(!name)return; S.vorrat=S.vorrat||{};
+  const ex=Object.entries(S.vorrat).find(([,v])=>String(v.name).trim().toLowerCase()===name.toLowerCase());
+  if(ex){ex[1].st='da'; ex[1].t=Date.now(); if(food&&!ex[1].food)ex[1].food=food} else {const v={name,st:'da',t:Date.now()}; if(food)v.food=food; S.vorrat['a'+uid()]=v}
+  UI.vq=''; vSave(); UI.vFocus=true; drawVorrat()}
+
+/* Home Assistant */
+const HA_LOCAL=['haUrl','haToken','haOn','hcSync','hcLast'];
+const HA_KEY='tellerflamme.ha';
+const HA={st:(()=>{try{return JSON.parse(localStorage.getItem(HA_KEY))||{}}catch(e){return {}}})(),busy:false,again:false,timer:null,applying:false};
+HA.st.sent=HA.st.sent||{}; HA.st.cursor=HA.st.cursor||0;
+function haSaveSt(){try{localStorage.setItem(HA_KEY,JSON.stringify(HA.st))}catch(e){}}
+function haNative(){try{return !!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform())}catch(e){return false}}
+function haDev(){if(!HA.st.dev){HA.st.dev=(haNative()?'App':'Browser')+'-'+uid().slice(0,4); haSaveSt()} return HA.st.dev}
+function haOn(){const g=S.settings; return !!(g.haOn&&g.haUrl&&g.haToken)&&!(window.claude&&window.claude.use)}
+function stable(v){if(v===null||typeof v!=='object')return JSON.stringify(v===undefined?null:v); if(Array.isArray(v))return '['+v.map(stable).join(',')+']'; return '{'+Object.keys(v).filter(k=>v[k]!==undefined).sort().map(k=>JSON.stringify(k)+':'+stable(v[k])).join(',')+'}'}
+function haHash(v){const s=stable(v); let h=5381; for(let i=0;i<s.length;i++)h=(h*33^s.charCodeAt(i))|0; return s.length.toString(36)+'.'+(h>>>0).toString(36)}
+/* Alle Daten als einzelne Datensätze: s, f:<id>, r:<id>, b:<datum>, e:<id>, v:<id> */
+function haRecords(){const R={}; const s={}; Object.keys(S.settings).forEach(k=>{if(!HA_LOCAL.includes(k))s[k]=S.settings[k]}); R.s=s;
+  Object.entries(S.foods||{}).forEach(([id,f])=>R['f:'+id]=f); Object.entries(S.recipes||{}).forEach(([id,r])=>R['r:'+id]=r);
+  Object.entries(S.body||{}).forEach(([d,b])=>R['b:'+d]=b); Object.entries(S.vorrat||{}).forEach(([id,v])=>R['v:'+id]=v);
+  Object.entries(S.days||{}).forEach(([d,es])=>(es||[]).forEach(e=>{if(e&&e.id)R['e:'+e.id]={...e,d}})); return R}
+function haApply(recs){let idx=null; const I=()=>{if(!idx){idx={}; Object.entries(S.days).forEach(([d,es])=>es.forEach(e=>idx[e.id]=d))} return idx};
+  S.vorrat=S.vorrat||{}; S.body=S.body||{};
+  recs.forEach(r=>{const k=String(r.k), v=r.del?null:r.v; const c=k.indexOf(':'), t=c<0?k:k.slice(0,c), id=c<0?'':k.slice(c+1);
+    if(t==='s'){if(v&&typeof v==='object'){const keep={}; HA_LOCAL.forEach(x=>{if(S.settings[x]!==undefined)keep[x]=S.settings[x]}); S.settings={...DEF_SETTINGS,...v,...keep}}}
+    else if(t==='f'||t==='r'||t==='b'||t==='v'){const m=t==='f'?S.foods:t==='r'?S.recipes:t==='b'?S.body:S.vorrat; if(v==null)delete m[id]; else m[id]=v}
+    else if(t==='e'){const ix=I(), od=ix[id]; if(od){S.days[od]=(S.days[od]||[]).filter(e=>e.id!==id); if(!S.days[od].length)delete S.days[od]; delete ix[id]}
+      if(v&&v.d){const {d,...e}=v; (S.days[d]=S.days[d]||[]).push(e); S.days[d].sort((a,b)=>(a.t||0)-(b.t||0)); ix[id]=d}}})}
+function haStatus(){const d=today(), t=dayTotals(d), sg=suggest();
+  return {date:d,kcal:Math.round(t[0]),kcalGoal:dayGoal(d),prot:Math.round(t[1]),streak:streakInfo().cur,updated:new Date().toISOString(),device:haDev(),
+    gapDays:sg.gaps.days,gaps:sg.gaps.list.slice(0,6).map(g=>({name:g.name,pct:g.pct})),
+    suggestions:sg.recipes.slice(0,5).map(s=>({name:s.name,fehlt:s.missing,gut_fuer:s.helps,kcal:s.kcal})),foods:sg.foods.slice(0,5).map(f=>({name:f.name,gut_fuer:f.helps}))}}
+async function haFetch(path,method,body){const g=S.settings; const url=String(g.haUrl).trim().replace(/\/+$/,'')+path;
+  const headers={'Authorization':'Bearer '+String(g.haToken).trim(),'Content-Type':'application/json'};
+  const chk=st=>{if(st===401||st===403)throw new Error('Der Zugangs-Token wird nicht akzeptiert.'); if(st===404)throw new Error('Die Tellerflamme-Erweiterung ist in Home Assistant nicht eingerichtet (404).'); if(st===503)throw new Error('Tellerflamme ist in Home Assistant noch nicht hinzugefügt (Einstellungen → Geräte & Dienste).'); if(st>=400)throw new Error('Home Assistant antwortet mit Fehler '+st+'.')};
+  const H=haNative()&&Capacitor.Plugins&&Capacitor.Plugins.CapacitorHttp;
+  if(H){let r; try{r=await H.request({url,method,headers,data:body,connectTimeout:8000,readTimeout:20000})}catch(e){throw new Error('Home Assistant ist nicht erreichbar. Stimmt die Adresse, und bist du im richtigen WLAN? ('+(e&&e.message||e)+')')}
+    chk(r.status); return typeof r.data==='string'?JSON.parse(r.data):r.data}
+  const ctl=new AbortController(), tm=setTimeout(()=>ctl.abort(),15000);
+  try{const r=await fetch(url,{method,headers,body:body?JSON.stringify(body):undefined,signal:ctl.signal,cache:'no-store'}); chk(r.status); return await r.json()}
+  catch(e){if(e&&e.name==='AbortError')throw new Error('Home Assistant antwortet nicht.'); if(e instanceof TypeError)throw new Error(location.protocol==='https:'&&/^http:/i.test(url)?'Eine https-Seite darf kein Home Assistant über http erreichen. Nimm die Android-App oder eine https-Adresse (z. B. Nabu Casa).':'Home Assistant ist nicht erreichbar. Prüf die Adresse. Im Browser muss diese Seite außerdem in cors_allowed_origins stehen.'); throw e}
+  finally{clearTimeout(tm)}}
+async function haSync(manual){if(!haOn()){if(manual)toast('Erst Adresse und Token eintragen.');return}
+  if(HA.busy){HA.again=true;return} HA.busy=true; HA.again=false; clearTimeout(HA.timer);
+  try{const R=haRecords(), sent=HA.st.sent, first=!HA.st.epoch, now=Date.now(), ch=[], hs={};
+    Object.entries(R).forEach(([k,v])=>{const h=haHash(v); hs[k]=h; if(sent[k]!==h)ch.push({k,v,ts:first?0:now})});
+    Object.keys(sent).forEach(k=>{if(!(k in R))ch.push({k,del:true,ts:now})});
+    const res=await haFetch('/api/tellerflamme/sync','POST',{cursor:HA.st.cursor,epoch:HA.st.epoch||null,client:haDev(),changes:ch,status:haStatus()});
+    if(!res||!Array.isArray(res.records))throw new Error('Unerwartete Antwort von Home Assistant.');
+    const ns=res.reset?{}:{...sent}; if(!res.reset)ch.forEach(c=>{if(c.del)delete ns[c.k]; else ns[c.k]=hs[c.k]});
+    const recs=res.records; res.records.forEach(r=>{if(r.del)delete ns[r.k]; else ns[r.k]=haHash(r.v)});
+    if(recs.length){HA.applying=true; try{haApply(recs); Store.saveLocal()}finally{HA.applying=false}}
+    const wasReset=res.reset&&!first; HA.st={...HA.st,sent:ns,cursor:res.cursor,epoch:res.epoch,last:Date.now(),err:''}; haSaveSt();
+    if(wasReset)HA.again=true;
+    const changed=recs.some(r=>!(r.k in R)||hs[r.k]!==haHash(r.v)||r.del);
+    if(manual)toast(changed?'Abgeglichen: '+recs.length+' Änderungen geholt':'Abgeglichen');
+    const busyUI=document.querySelector('.sheet')||['INPUT','TEXTAREA','SELECT'].includes((document.activeElement||{}).tagName);
+    if(changed&&!busyUI)render(); else if(UI.tab==='mehr'&&!busyUI)render();
+  }catch(e){HA.st.err=String(e&&e.message||e); haSaveSt(); if(manual)toast(HA.st.err); if(UI.tab==='mehr'&&!document.querySelector('.sheet'))render()}
+  finally{HA.busy=false; if(HA.again)haSoon(1500)}}
+function haSoon(ms){if(!haOn()||HA.applying)return; clearTimeout(HA.timer); HA.timer=setTimeout(()=>haSync(false),ms||4000)}
+function haCard(){const g=S.settings, art=!!(window.claude&&window.claude.use);
+  return `<section class="card stack" style="gap:10px"><h3>Home Assistant</h3>
+   <div class="small">Gleicht Tagebuch, Vorrat, eigene Lebensmittel, Rezepte und Ziele zwischen deinen Geräten ab. In Home Assistant gibt es dann einen Vorrat, eine Einkaufsliste und Sensoren mit Rezeptvorschlag, Kalorien und Vitaminlücken.</div>
+   ${art?'<div class="note">In der claude.ai-Ansicht ist die Verbindung zu Home Assistant gesperrt. Das geht in der Android-App oder auf der Webseite.</div>':`
+   <div class="field"><label for="ha-url">Adresse</label><input id="ha-url" inputmode="url" autocomplete="off" placeholder="http://homeassistant.local:8123" value="${esc(g.haUrl||'')}"></div>
+   <div class="field"><label for="ha-token">Zugangs-Token (langlebig)</label><input id="ha-token" type="password" autocomplete="off" placeholder="In Home Assistant: Profil → Sicherheit → Token erstellen" value="${esc(g.haToken||'')}"></div>
+   <label class="row small"><input type="checkbox" id="ha-on" style="width:auto" ${g.haOn?'checked':''}> Automatisch abgleichen (beim Öffnen, nach Änderungen und jede Minute)</label>
+   <div class="row wrapr"><button class="primary sm" data-act="hasave">Speichern und testen</button>${haOn()?`<button class="sm" data-act="hasync" ${HA.busy?'disabled':''}>Jetzt abgleichen</button>`:''}</div>
+   ${HA.st.err&&g.haOn?`<div class="note" role="status">${esc(HA.st.err)}</div>`:HA.st.last&&g.haOn?`<div class="tiny muted" role="status">Zuletzt abgeglichen: ${new Date(HA.st.last).toLocaleString('de-DE')} · Gerät ${esc(haDev())}</div>`:''}
+   <details><summary class="small">So richtest du es ein</summary><ol class="small" style="margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:4px">
+    <li>Die Erweiterung „Tellerflamme“ in Home Assistant installieren (über HACS als benutzerdefiniertes Repository <b>github.com/legolas06/essen</b>, oder den Ordner custom_components/tellerflamme kopieren) und Home Assistant neu starten.</li>
+    <li>Einstellungen → Geräte &amp; Dienste → Integration hinzufügen → „Tellerflamme“.</li>
+    <li>Profil → Sicherheit → „Langlebige Zugangs-Token“ → Token erstellen und hier einfügen.</li>
+    <li>Als Adresse die, unter der du Home Assistant im Browser öffnest. Von unterwegs geht es nur mit einer Adresse, die auch außerhalb erreichbar ist, z. B. Nabu Casa.</li>
+    <li>Auf jedem Gerät dieselbe Adresse und denselben Token eintragen. Am besten zuerst auf dem Gerät mit den meisten Einträgen.</li></ol></details>`}
+   </section>`}
+document.addEventListener('click',async ev=>{const el=ev.target.closest('[data-act]'); if(!el)return; const a=el.dataset.act;
+  switch(a){
+    case 'vorrat':UI.vq='';sheetVorrat();break;
+    case 'vclose':UI.vorratOpen=false;closeSheet();render();break;
+    case 'vst':{const v=S.vorrat&&S.vorrat[el.dataset.id]; if(v){v.st=el.dataset.st; v.t=Date.now(); vSave(); drawVorrat()} break}
+    case 'vdel':if(S.vorrat){delete S.vorrat[el.dataset.id]; vSave(); drawVorrat()} break;
+    case 'vaddf':{const f=getFood(el.dataset.id); if(f)vAddItem(shortName(f.name),f.id); break}
+    case 'vaddn':vAddItem(UI.vq);break;
+    case 'hasave':{const g=S.settings; g.haUrl=document.getElementById('ha-url').value.trim(); g.haToken=document.getElementById('ha-token').value.trim(); g.haOn=true;
+      if(g.haUrl&&!/^https?:\/\//i.test(g.haUrl))g.haUrl='http://'+g.haUrl; Store.saveMeta();
+      try{const r=await haFetch('/api/tellerflamme/ping','GET'); if(!r||!r.ok)throw new Error('Tellerflamme ist in Home Assistant noch nicht hinzugefügt (Einstellungen → Geräte & Dienste).'); HA.st.err=''; toast('Verbunden. Gleiche ab …'); await haSync(true)}
+      catch(e){HA.st.err=String(e&&e.message||e); haSaveSt(); toast(HA.st.err)} render(); break}
+    case 'hasync':haSync(true);break;
+  }});
+document.addEventListener('input',ev=>{if(ev.target.id==='vq'){UI.vq=ev.target.value; UI.vFocus=true; drawVorrat()}});
+document.addEventListener('keydown',ev=>{if(ev.key==='Enter'&&ev.target.id==='vq'){const h=(UI.vq||'').trim()?searchLocal(UI.vq).filter(x=>x.kind==='f'):[]; if(h.length&&nameHas(h[0].name,vWords(UI.vq))){const f=getFood(h[0].id); vAddItem(shortName(f.name),f.id)} else vAddItem(UI.vq)}});
+document.addEventListener('change',ev=>{if(ev.target.id==='ha-on'){S.settings.haOn=ev.target.checked; Store.saveMeta(); if(S.settings.haOn)haSoon(300); setTimeout(render,0)}});
+(function(){const sl=Store.saveLocal; Store.saveLocal=function(){sl.call(Store); if(!HA.applying)haSoon()}})();
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&haOn())haSoon(500)});
+setInterval(()=>{if(document.visibilityState==='visible'&&haOn()&&!HA.busy)haSync(false)},60000);
+
 /* Selbst-Update der Handy-App: neue Web-Version von GitHub Pages laden, ohne APK neu zu installieren */
 const APP_VERSION='__APP_VERSION__', UPD_BASE='https://legolas06.github.io/Essen/';
 function updater(){try{return window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()&&Capacitor.Plugins&&Capacitor.Plugins.CapacitorUpdater||null}catch(e){return null}}
@@ -1322,7 +1467,7 @@ async function checkUpdate(force){const U=updater(); if(!U||updBusy)return; if(A
     say('Lade Version '+v.version+' …'); const b=await U.download({url:UPD_BASE+'update.zip?v='+v.version,version:v.version}); await U.next({id:b.id}); updId=b.id; updBar(); say('Version '+v.version+' ist geladen. Tipp oben auf „Jetzt aktualisieren“ oder starte die App neu.')}
   catch(e){say('Update fehlgeschlagen: '+(e&&e.message||e))}finally{updBusy=false; if(UI.tab==='mehr')render()}}
 (function(){const U=updater(); if(U){try{U.notifyAppReady()}catch(e){} setTimeout(()=>checkUpdate(true),3000); document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkUpdate(false)})}})();
-loadLocal(); UI.lastToday=today(); render(); connectCloud(); if(S.settings.hcSync)setTimeout(()=>syncHealth(false),800);
+loadLocal(); UI.lastToday=today(); render(); connectCloud(); if(haOn())setTimeout(()=>haSync(false),1200); if(S.settings.hcSync)setTimeout(()=>syncHealth(false),800);
 </script>
 
 <script>if("serviceWorker" in navigator&&location.protocol==="https:"&&!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()))navigator.serviceWorker.register("sw.js").catch(()=>{})</script>
