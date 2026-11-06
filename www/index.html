@@ -146,6 +146,9 @@ ol.steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
 @media (prefers-reduced-motion:no-preference){.flamebig.lit svg{animation:flick 2.4s ease-in-out infinite;transform-origin:50% 90%}@keyframes flick{0%,100%{transform:scale(1)}50%{transform:scale(1.05,.97)}}}
 
 /* ---- Look ---- */
+.chk{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-weight:900;color:#fff;flex:none}
+.chk.on{background:var(--accent);border-color:var(--accent)}
+.selbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:22;width:min(528px,calc(100% - 32px));display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:10px 12px;box-shadow:0 6px 24px var(--shadow)}
 body{font-weight:500}
 header.top{background:var(--bg)}
 .brand{font-family:var(--display);font-weight:700;font-size:25px;letter-spacing:0;color:var(--accent)}
@@ -515,7 +518,7 @@ function vHeute(si){
   <section class="card">${meals}</section>
   ${waterCard(d)}
   <section class="card stack" style="gap:10px"><div class="row" style="justify-content:space-between"><h3>Aktivität &amp; Gewicht</h3>${g.useBurn&&bd.burn?`<span class="tiny muted">+${Math.round(bd.burn*g.burnFactor)} kcal aufs Ziel</span>`:''}</div>
-   ${g.hcSync||bd.hc?`<div class="hc"><div><span class="tiny muted">Aktivkalorien</span><b>${bd.burn!=null?bd.burn:'–'}</b><span class="tiny muted">kcal</span></div><div><span class="tiny muted">Schritte</span><b>${bd.steps!=null?bd.steps.toLocaleString('de-DE'):'–'}</b><span class="tiny muted">heute</span></div><div><span class="tiny muted">Gewicht</span><b>${bd.w!=null?fmt(bd.w):'–'}</b><span class="tiny muted">kg</span></div></div>
+   ${g.hcSync||bd.hc?`<div class="hc"><div><span class="tiny muted">Aktivkalorien</span><b>${bd.burn!=null?bd.burn:'–'}</b><span class="tiny muted">kcal</span></div><div><span class="tiny muted">Schritte</span><b>${bd.steps!=null?bd.steps.toLocaleString('de-DE'):'–'}</b><span class="tiny muted">${UI.date===today()?'seit 0 Uhr':'am Tag'}</span></div><div><span class="tiny muted">Gewicht</span><b>${bd.w!=null?fmt(bd.w):'–'}</b><span class="tiny muted">kg</span></div></div>
    <div class="row" style="justify-content:space-between"><span class="tiny muted">Aus Health Connect${g.hcLast?' · Stand '+new Date(g.hcLast).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):''}</span>${nativeHealth()?'<button class="sm" data-act="hc">Aktualisieren</button>':''}</div>
    <details><summary class="small">Von Hand ändern</summary><div class="grid2" style="margin-top:8px">${bodyInputs(bd)}</div></details>`
    :`<div class="grid2">${bodyInputs(bd)}</div>${nativeHealth()?'<button class="sm" data-act="hc">Mit Health Connect verbinden</button>':''}`}
@@ -547,7 +550,7 @@ function recents(){const seen=new Set(),out=[];const ds=Object.keys(S.days).sort
     if(e.kind==='r'){const r=getRecipe(e.ref); if(r)out.push({kind:'r',id:r.id,name:r.name,tag:SRC[r.src],kcal:recipeCalc(r).per[0],unit:'1 '+r.unit})}
     else{const f=getFood(e.ref); if(f)out.push({kind:'f',id:f.id,name:f.name,brand:f.brand,tag:[f.src==='db'?f.cat:f.src==='ch'?'Schweiz':f.src==='bls'?'BLS':'Gespeichert',['db','ch','bls'].includes(f.src)?'':'own'],kcal:f.per[0],unit:'100 g'})}
     if(out.length>=8)return out}}return out}
-function itemRow(it){return `<button class="item" data-act="pick" data-kind="${it.kind}" data-id="${esc(it.id)}"><div class="grow"><div class="nm">${esc(it.name)}</div><div class="row wrapr" style="gap:6px;margin-top:2px">${it.brand?`<span class="tiny muted">${esc(it.brand)}</span>`:''}${it.tag?`<span class="tag ${it.tag[1]}">${esc(it.tag[0])}</span>`:''}</div></div><div style="text-align:right"><div class="kc">${Math.round(it.kcal||0)} kcal</div><div class="tiny muted">je ${esc(it.unit)}</div></div></button>`}
+function itemRow(it){const on=UI.multi&&UI.sel.some(x=>x.key===selKey(it.kind,it.id)); return `<button class="item" data-act="pick" data-kind="${it.kind}" data-id="${esc(it.id)}" ${UI.multi?`aria-pressed="${on}"`:''}>${UI.multi?`<span class="chk ${on?'on':''}" aria-hidden="true">${on?'✓':''}</span>`:''}<div class="grow"><div class="nm">${esc(it.name)}</div><div class="row wrapr" style="gap:6px;margin-top:2px">${it.brand?`<span class="tiny muted">${esc(it.brand)}</span>`:''}${it.tag?`<span class="tag ${it.tag[1]}">${esc(it.tag[0])}</span>`:''}</div></div><div style="text-align:right"><div class="kc">${Math.round(it.kcal||0)} kcal</div><div class="tiny muted">je ${esc(it.unit)}</div></div></button>`}
 function vAdd(){
   const res=UI.q.trim()?searchLocal(UI.q):[]; const rec=recents();
   const online=UI.online.map(f=>itemRow({kind:'o',id:f.code,name:f.name,brand:f.brand,tag:['Open Food Facts',''],kcal:f.per[0],unit:'100 g'})).join('');
@@ -558,6 +561,8 @@ function vAdd(){
     return `<section class="card stack" style="gap:6px"><div class="row" style="justify-content:space-between"><span class="label">Schon in ${MEALS.find(m=>m[0]===UI.meal)[1]}</span><span class="kc small">${Math.round(es.reduce((a,e)=>a+e.n[0],0))} kcal</span></div>
     <div class="list">${es.map(e=>`<div class="entry"><div class="grow"><div>${esc(e.name)}</div><div class="pfc">${fmt(e.amt)} ${esc(e.unit)}</div></div><span class="kc">${Math.round(e.n[0])}</span><button class="ghost" data-act="delentry" data-id="${e.id}" aria-label="Eintrag löschen">✕</button></div>`).join('')}</div>
     <button class="primary" data-act="donemeal">Fertig</button></section>`})()}
+  <div class="row" style="justify-content:flex-end"><button class="sm ${UI.multi?'primary':''}" data-act="multi" aria-pressed="${!!UI.multi}">${UI.multi?'Mehrfachauswahl an':'Mehrere auswählen'}</button></div>
+  ${UI.multi&&UI.sel.length?`<div class="selbar"><span><b>${UI.sel.length}</b> ausgewählt</span><button class="primary sm" data-act="multiamt">Mengen eingeben</button></div>`:''}
   <input id="q" type="search" placeholder="${(S.days[UI.date]||[]).some(e=>e.meal===UI.meal)?'Noch etwas hinzufügen …':'Lebensmittel oder Gericht suchen'}" value="${esc(UI.q)}" autocomplete="off">
   <div class="grid3">
     <button data-act="scan">${svgI('<path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2M8 8v8M11 8v8M14 8v8M17 8v8"/>')}Scannen</button>
@@ -579,12 +584,36 @@ function vAdd(){
 function svgI(p){return `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`}
 
 /* Mengen-Dialog */
-function openAmount(kind,id,food){
-  let item, portions, base;
-  if(kind==='r'){const r=getRecipe(id); const c=recipeCalc(r); item={name:r.name,per:c.per}; base='p'; portions=[['1/2',0.5],['1',1],['1,5',1.5],['2',2]]; UI.amt={kind,ref:id,name:r.name,per:c.per,unitMode:'p',unit:r.unit==='Stück'?'Stück':'Portion',amt:1}}
-  else{const f=food||getFood(id); item=f; UI.amt={kind:'f',ref:f.id,name:f.name+(f.brand?' ('+f.brand+')':''),per:f.per,unitMode:'g',unit:'g',amt:(f.portions&&f.portions[0]?f.portions[0][1]:100),noMicro:f.micros===false,portions:f.portions||[]}}
-  sheetAmount();
+function amtData(kind,id,food){
+  if(kind==='r'){const r=getRecipe(id); const c=recipeCalc(r); return {kind,ref:id,name:r.name,per:c.per,unitMode:'p',unit:r.unit==='Stück'?'Stück':'Portion',amt:1,portions:[]}}
+  const f=food||getFood(id); return {kind:'f',ref:f.id,name:f.name+(f.brand?' ('+f.brand+')':''),per:f.per,unitMode:'g',unit:'g',amt:(f.portions&&f.portions[0]?f.portions[0][1]:100),noMicro:f.micros===false,portions:f.portions||[]}}
+function openAmount(kind,id,food){UI.amt=amtData(kind,id,food); sheetAmount()}
+function makeEntry(a,tm){const f=a.unitMode==='g'?a.amt/100:a.amt; const e={id:uid(),kind:a.kind,ref:a.ref,name:a.name,amt:a.amt,unit:a.unitMode==='g'?'g':a.unit,meal:UI.meal,time:tm,n:a.per.map(v=>Math.round(v*f*1000)/1000),t:Date.now()}; if(a.noMicro)e.noMicro=true; return e}
+/* Mehrfachauswahl */
+UI.sel=[];
+function selKey(kind,id){return kind+':'+id}
+function toggleSel(kind,id){const k=selKey(kind,id); const i=UI.sel.findIndex(x=>x.key===k);
+  if(i>=0)UI.sel.splice(i,1);
+  else{let food=null; if(kind==='o'){food=UI.online.find(x=>x.code===id)||UI.usda.find(x=>x.code===id); S.foods[food.id]=food; Store.saveMeta(); UI.sel.push({key:k,a:amtData('f',food.id,food)})} else UI.sel.push({key:k,a:amtData(kind,id)})}
+  render()}
+function sheetMulti(){
+  const tm=UI.multiTime||(UI.date===today()?nowHM():MEALTIME[UI.meal]);
+  const tot=zero(); UI.sel.forEach(({a})=>addTo(tot,a.per,a.unitMode==='g'?a.amt/100:a.amt));
+  openSheet(`<div class="stack"><div><div class="label">${MEALS.find(m=>m[0]===UI.meal)[1]} · ${fmtDate(UI.date)}</div><h2 style="margin-top:4px">${UI.sel.length} Lebensmittel eintragen</h2></div>
+   <div class="card list">${UI.sel.map(({a},i)=>{const q=a.unitMode==='p'?[['½',0.5],['1',1],['2',2]]:[...a.portions.slice(0,2).map(p=>[p[0],p[1]]),['100 g',100]];
+     return `<div class="entry" style="flex-wrap:wrap"><div class="grow" style="min-width:60%"><div>${esc(a.name)}</div><div class="row wrapr" style="gap:4px;margin-top:4px">${q.map(x=>`<button class="sm" data-act="mquick" data-i="${i}" data-v="${x[1]}">${esc(x[0])}</button>`).join('')}</div></div>
+     <div class="row" style="gap:4px"><input type="number" inputmode="decimal" min="0" step="any" value="${a.amt}" data-mi="${i}" style="width:80px" aria-label="Menge ${esc(a.name)}"><span class="small muted">${a.unitMode==='g'?'g':a.unit==='Stück'?'Stk.':'Port.'}</span><button class="ghost" data-act="mdel" data-i="${i}" aria-label="Entfernen">✕</button></div></div>`}).join('')}</div>
+   <div class="row"><label for="mTime" class="small muted" style="white-space:nowrap">Gegessen um</label><input id="mTime" type="time" value="${tm}" style="max-width:130px"></div>
+   <div class="card"><div class="row" style="justify-content:space-between;align-items:baseline"><b class="num" style="font-family:var(--display);font-size:24px" id="mK">${Math.round(tot[0])} kcal</b><span class="pfc" id="mM">E ${fmt(tot[1])} g · K ${fmt(tot[2])} g · F ${fmt(tot[4])} g</span></div></div>
+   <button class="primary" data-act="maddall" ${UI.sel.length?'':'disabled'}>Alle eintragen</button><button data-act="close">Zurück</button></div>`);
+  document.getElementById('mTime').addEventListener('input',e=>{UI.multiTime=e.target.value});
 }
+function multiTotals(){const tot=zero(); UI.sel.forEach(({a})=>addTo(tot,a.per,a.unitMode==='g'?a.amt/100:a.amt)); const k=document.getElementById('mK'); if(k){k.textContent=Math.round(tot[0])+' kcal'; document.getElementById('mM').textContent=`E ${fmt(tot[1])} g · K ${fmt(tot[2])} g · F ${fmt(tot[4])} g`}}
+function addAll(){const tm=(document.getElementById('mTime')||{}).value||nowHM(); const list=UI.sel.filter(x=>x.a.amt>0); if(!list.length){toast('Bitte Mengen eingeben.');return}
+  const before=streakInfo(); const arr=(S.days[UI.date]=S.days[UI.date]||[]); list.forEach(({a})=>arr.push(makeEntry(a,tm))); Store.saveDay(UI.date);
+  UI.sel=[]; UI.multi=false; UI.multiTime=null; closeSheet(); const after=streakInfo();
+  toast(!before.todayDone&&after.todayDone?(after.cur>1?`Streak verlängert: ${after.cur} Tage`:'Streak gestartet!'):`${list.length} Lebensmittel eingetragen`);
+  UI.tab='add'; UI.q=''; UI.online=[]; UI.usda=[]; UI.onlineState=''; UI.usdaState=''; render()}
 function sheetAmount(){
   const a=UI.amt; const f=a.unitMode==='g'?a.amt/100:a.amt; const n=a.per.map(v=>v*f);
   const quick=a.unitMode==='p'?[['½',0.5],['1',1],['1½',1.5],['2',2],['3',3]]:[...a.portions.map(p=>[p[0]+' ('+p[1]+' g)',p[1]]),['100 g',100]];
@@ -602,8 +631,7 @@ function addEntry(){
   const a=UI.amt; if(!a||!(a.amt>0)){toast('Bitte eine Menge eingeben.');return}
   const f=a.unitMode==='g'?a.amt/100:a.amt;
   const tm=(document.getElementById('amtTime')||{}).value||nowHM(); UI.lastTime=tm;
-  const e={id:uid(),kind:a.kind,ref:a.ref,name:a.name,amt:a.amt,unit:a.unitMode==='g'?'g':a.unit,meal:UI.meal,time:tm,n:a.per.map(v=>Math.round(v*f*1000)/1000),t:Date.now()};
-  if(a.noMicro)e.noMicro=true;
+  const e=makeEntry(a,tm);
   const before=streakInfo();
   (S.days[UI.date]=S.days[UI.date]||[]).push(e); Store.saveDay(UI.date);
   closeSheet(); const after=streakInfo();
@@ -945,6 +973,12 @@ async function syncHealth(interactive){
     (aggregatedData||[]).forEach(x=>{const d=ymd(new Date(x.startDate)); if(x.value>0){const b=(S.body[d]=S.body[d]||{}); b.burn=Math.round(x.value); b.hc=1}});
     try{const st=await H.queryAggregated({startDate:start.toISOString(),endDate:end.toISOString(),dataType:'steps',bucket:'day'});
       (st.aggregatedData||[]).forEach(x=>{const d=ymd(new Date(x.startDate)); if(x.value>0){const b=(S.body[d]=S.body[d]||{}); b.steps=Math.round(x.value); b.hc=1}})}catch(e){}
+    /* Heute separat: genau ab 0:00 Uhr Ortszeit bis jetzt (stündlich summiert, damit kein 24-h-Fenster entsteht) */
+    const t0=new Date(); t0.setHours(0,0,0,0); const td=today(); const tb=(S.body[td]=S.body[td]||{});
+    const sumToday=async type=>{let r; try{r=await H.queryAggregated({startDate:t0.toISOString(),endDate:end.toISOString(),dataType:type,bucket:'hour'})}catch(e){r=await H.queryAggregated({startDate:t0.toISOString(),endDate:end.toISOString(),dataType:type,bucket:'day'})}
+      return (r.aggregatedData||[]).filter(x=>new Date(x.startDate)>=t0-1000).reduce((s,x)=>s+(x.value||0),0)};
+    try{tb.steps=Math.round(await sumToday('steps')); tb.hc=1}catch(e){}
+    try{tb.burn=Math.round(await sumToday('active-calories')); tb.hc=1}catch(e){}
     try{const {records}=await H.queryRecords({startDate:start.toISOString(),endDate:end.toISOString(),dataType:'weight'});
       (records||[]).forEach(r=>{const d=ymd(new Date(r.startDate)); const b=(S.body[d]=S.body[d]||{}); b.w=Math.round(r.value*10)/10; b.hc=1});
       const last=(records||[]).slice(-1)[0]; if(last)S.settings.weight=Math.round(last.value*10)/10}catch(e){}
@@ -1024,10 +1058,15 @@ document.addEventListener('click',async ev=>{
     case 'day':UI.date=addDays(UI.date,+el.dataset.d); if(UI.date>today())UI.date=today(); render();break;
     case 'addmeal':UI.meal=el.dataset.meal;UI.tab='add';UI.focusQ=true;render();break;
     case 'delentry':S.days[UI.date]=(S.days[UI.date]||[]).filter(e=>e.id!==el.dataset.id);Store.saveDay(UI.date);render();toast('Eintrag gelöscht');break;
+    case 'multi':UI.multi=!UI.multi; if(!UI.multi)UI.sel=[]; render();break;
+    case 'multiamt':sheetMulti();break;
+    case 'mquick':UI.sel[+el.dataset.i].a.amt=+el.dataset.v;sheetMulti();break;
+    case 'mdel':UI.sel.splice(+el.dataset.i,1); if(!UI.sel.length){closeSheet();render()} else sheetMulti();break;
+    case 'maddall':addAll();break;
     case 'donemeal':UI.tab='heute';UI.q='';window.scrollTo(0,0);render();break;
     case 'water':{const b=S.body[UI.date]=S.body[UI.date]||{}; b.water=Math.max(0,(b.water||0)+(+el.dataset.ml)); if(!b.water)delete b.water; if(!Object.keys(b).length)delete S.body[UI.date]; Store.saveMeta(); render(); const g=S.settings.waterGoal||2500; if(+el.dataset.ml>0&&b.water>=g&&b.water-(+el.dataset.ml)<g)toast('Trinkziel geschafft!'); break}
     case 'meal':UI.meal=el.dataset.meal;render();break;
-    case 'pick':{const k=el.dataset.kind,id=el.dataset.id; if(k==='o'){const f=UI.online.find(x=>x.code===id)||UI.usda.find(x=>x.code===id); S.foods[f.id]=f; Store.saveMeta(); openAmount('f',f.id,f)} else openAmount(k,id); break}
+    case 'pick':{const k=el.dataset.kind,id=el.dataset.id; if(UI.multi){toggleSel(k,id);break} if(k==='o'){const f=UI.online.find(x=>x.code===id)||UI.usda.find(x=>x.code===id); S.foods[f.id]=f; Store.saveMeta(); openAmount('f',f.id,f)} else openAmount(k,id); break}
     case 'quick':UI.amt.amt=+el.dataset.v;sheetAmount();break;
     case 'addentry':addEntry();break;
     case 'scan':startScan();break;
@@ -1070,6 +1109,7 @@ document.addEventListener('click',async ev=>{
 document.addEventListener('input',ev=>{
   if(ev.target.id==='q'){UI.q=ev.target.value; UI.online=[]; UI.onlineState=''; UI.usda=[]; UI.usdaState=''; UI.focusQ=true; render()}
   else if(ev.target.id==='nr-q'){UI.nr.name=document.getElementById('nr-name').value; UI.nr.yield=parseInt(document.getElementById('nr-yield').value)||1; UI.nr.q=ev.target.value; UI.nrFocus=true; drawNewRecipe()}
+  else if(ev.target.dataset.mi!=null){UI.sel[+ev.target.dataset.mi].a.amt=parseFloat(String(ev.target.value).replace(',','.'))||0; multiTotals()}
   else if(ev.target.dataset.ingi!=null){UI.nr.ing[+ev.target.dataset.ingi][1]=parseFloat(ev.target.value)||0}
   else if(ev.target.id==='idea'){UI.idea=ev.target.value}
 });
