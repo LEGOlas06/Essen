@@ -9,6 +9,7 @@ Kostenloser Ernährungs-Tracker mit Streaks, Vitaminen und Mineralstoffen, Rezep
 - Eigene Lebensmittel-Datenbank (Richtwerte nach USDA/BLS)
 - Open Food Facts (Barcodes, Markenprodukte)
 - USDA FoodData Central (vollständige Mikronährstoffe)
+- Schweizer Nährwertdatenbank V 7.1, © Bundesamt für Lebensmittelsicherheit und Veterinärwesen (BLV), naehrwertdaten.ch
 
 ## Aufbau
 - `www/index.html`: die komplette App in einer Datei
