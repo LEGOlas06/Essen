@@ -1196,14 +1196,20 @@ function adaptiveCard(){const a=adaptive(); const g=S.settings;
    <div class="tiny muted">Genauer wird es, wenn du an möglichst allen Tagen alles einträgst.</div></section>`}
 
 /* Export */
-const dec=v=>String(Math.round(v*100)/100).replace('.',',');
+const dec=v=>v==null||isNaN(v)?'':String(Math.round(v*100)/100).replace('.',',');
 function csvCell(s){s=String(s??'');return /[;"\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s}
 function csvEntries(){const head=['Datum','Uhrzeit','Mahlzeit','Lebensmittel','Menge','Einheit',...NK.map(k=>NI[k][0]+' ('+NI[k][1]+')')];const rows=[head.join(';')];
-  Object.keys(S.days).sort().forEach(d=>S.days[d].forEach(e=>rows.push([d,entryTime(e,d)||'',MEALS.find(m=>m[0]===e.meal)?.[1]||'',csvCell(e.name),dec(e.amt),e.unit,...e.n.map(dec)].join(';'))));return rows.join('\r\n')}
+  Object.keys(S.days).sort().forEach(d=>S.days[d].forEach(e=>rows.push([d,entryTime(e,d)||'',MEALS.find(m=>m[0]===e.meal)?.[1]||'',csvCell(e.name),dec(e.amt),e.unit,...NK.map((k,i)=>dec(e.n[i]))].join(';'))));return rows.join('\r\n')}
 function csvDays(){const head=['Datum','Einträge',...NK.map(k=>NI[k][0]+' ('+NI[k][1]+')'),'kcal-Ziel','Aktivkalorien','Schritte','Gewicht (kg)','Getrunken (ml)'];const rows=[head.join(';')];
   Object.keys(S.days).sort().forEach(d=>{if(!S.days[d].length)return; rows.push([d,S.days[d].length,...dayTotals(d).map(dec),dayGoal(d),S.body[d]&&S.body[d].burn!=null?S.body[d].burn:'',S.body[d]&&S.body[d].steps!=null?S.body[d].steps:'',S.body[d]&&S.body[d].w?dec(S.body[d].w):'',S.body[d]&&S.body[d].water?S.body[d].water:''].join(';'))});return rows.join('\r\n')}
 async function saveFile(name,text,mime){
   if(Store.dl){try{await Store.dl.save({filename:name,data:new Blob([text],{type:mime})});toast('Gespeichert: '+name)}catch(e){if(e&&e.code!=='declined')toast('Download nicht möglich: '+(e.message||e.code))}return}
+  /* Android/iOS-App: Downloads gehen in der WebView nicht. Datei speichern und über „Teilen“ anbieten (Drive, Dateien, Mail, WhatsApp …) */
+  const P=window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()&&Capacitor.Plugins||null;
+  if(P&&P.Filesystem){try{const w=await P.Filesystem.writeFile({path:name,data:text,directory:'CACHE',encoding:'utf8'});
+      if(P.Share){try{await P.Share.share({title:name,files:[w.uri],dialogTitle:'Datei speichern oder senden'});return}catch(e){if(/cancel/i.test(String(e&&e.message)))return}}
+      const d=await P.Filesystem.writeFile({path:name,data:text,directory:'DOCUMENTS',encoding:'utf8'}); toast('Gespeichert unter Dokumente: '+name); return}
+    catch(e){toast('Speichern nicht möglich: '+(e&&e.message||e)); return}}
   try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:mime}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}catch(e){toast('Download nicht möglich')}
 }
 function summaryText(){

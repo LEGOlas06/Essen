@@ -12,7 +12,9 @@
     "@capacitor/core": "^8.0.0",
     "capacitor-health": "8.4.0",
     "@capgo/capacitor-updater": "8.54.2",
-    "@capacitor/ios": "^8.0.0"
+    "@capacitor/ios": "^8.0.0",
+    "@capacitor/filesystem": "8.1.5",
+    "@capacitor/share": "8.0.3"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.0.0"
