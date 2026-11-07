@@ -1598,12 +1598,12 @@ function updBar(){let el=document.getElementById('updBar'); if(!updId){if(el)el.
   if(!el){el=document.createElement('div'); el.id='updBar'; el.className='selbar'; el.style.bottom='auto'; el.style.top='calc(10px + env(safe-area-inset-top,0px))'; document.body.appendChild(el)}
   el.innerHTML='<span>Neue Version bereit</span><button class="primary sm" id="updNow">Jetzt aktualisieren</button>'; document.getElementById('updNow').onclick=async()=>{try{await Store.saveMeta()}catch(e){} try{await updater().set({id:updId})}catch(e){toast('Update kommt beim nächsten Start.')}}}
 /* Robuster Download: ein schon geladenes Paket wiederverwenden, kaputte Reste löschen, bei Fehler einmal mit neuem Namen nochmal versuchen */
-async function updDownload(U,ver,say){let list=[]; try{const r=await U.list(); list=(r&&r.bundles)||[]}catch(e){}
+async function updDownload(U,ver,say,checksum){let list=[]; try{const r=await U.list(); list=(r&&r.bundles)||[]}catch(e){}
   const same=list.filter(x=>x.version===ver||String(x.version).startsWith(ver+'-'));
   const ok=same.find(x=>x.status==='success'); if(ok)return ok;
   for(const x of same){try{await U.delete({id:x.id})}catch(e){}}
   const url=UPD_BASE+'update.zip?v='+ver; let last=null;
-  for(let i=0;i<3;i++){try{return await U.download({url:url+(i?'&r='+Date.now():''),version:i?ver+'-'+Date.now().toString(36):ver})}
+  for(let i=0;i<3;i++){try{const o={url:url+(i?'&r='+Date.now():''),version:i?ver+'-'+Date.now().toString(36):ver}; if(checksum)o.checksum=checksum; return await U.download(o)}
     catch(e){last=e; say('Download hat nicht geklappt, neuer Versuch ('+(i+2)+'/3) …'); await new Promise(r=>setTimeout(r,1500*(i+1)))}}
   const why=last&&(last.message||last.errorMessage||last)||''; const detail=last&&last.data?(' '+JSON.stringify(last.data)):'';
   throw new Error(String(why)+detail)}
@@ -1613,7 +1613,7 @@ async function checkUpdate(force){const U=updater(); if(!U||updBusy)return; if(A
     if(!v||!v.version)throw new Error('Keine Versionsangabe');
     if(v.version===APP_VERSION){say('Du hast die neueste Version ('+APP_VERSION+').');return}
     if(updId){say('Update '+v.version+' ist schon geladen. Tipp oben auf „Jetzt aktualisieren“.');return}
-    say('Lade Version '+v.version+' …'); const b=await updDownload(U,v.version,say); await U.next({id:b.id}); updId=b.id; updBar(); say('Version '+v.version+' ist geladen. Tipp oben auf „Jetzt aktualisieren“ oder starte die App neu.')}
+    say('Lade Version '+v.version+' …'); const b=await updDownload(U,v.version,say,v.checksum); await U.next({id:b.id}); updId=b.id; updBar(); say('Version '+v.version+' ist geladen. Tipp oben auf „Jetzt aktualisieren“ oder starte die App neu.')}
   catch(e){say('Update fehlgeschlagen: '+(e&&e.message||e))}finally{updBusy=false; if(UI.tab==='mehr')render()}}
 (function(){const U=updater(); if(U){try{U.notifyAppReady()}catch(e){} setTimeout(()=>checkUpdate(true),3000); document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkUpdate(false)})}})();
 loadLocal(); UI.lastToday=today(); render(); connectCloud(); if(haOn())setTimeout(()=>haSync(false),1200); if(S.settings.hcSync)setTimeout(()=>syncHealth(false),800);

@@ -31,7 +31,8 @@ jobs:
           sed -i "s/__APP_VERSION__/$V/" site/index.html
           (cd site && zip -qr ../update.zip .)
           mv update.zip site/
-          echo "{\"version\":\"$V\"}" > site/version.json
+          C=$(sha256sum site/update.zip | cut -d' ' -f1)
+          echo "{\"version\":\"$V\",\"checksum\":\"$C\"}" > site/version.json
           echo "Version $V"
       - uses: actions/upload-pages-artifact@v3
         with:
