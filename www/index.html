@@ -1232,7 +1232,7 @@ async function importJSON(file){
 
 /* ---------- Zielrechner (Studienbasis siehe Quellen im Ziele-Tab) ---------- */
 const PALS=[[1.2,'Kaum Bewegung (fast nur sitzen/liegen)'],[1.4,'Sitzend, wenig Freizeitbewegung'],[1.6,'Sitzend mit Sport oder viel Gehen/Stehen'],[1.8,'Körperlich aktiv oder fast täglich Sport'],[2.0,'Schwere Arbeit oder Leistungssport']];
-function macrosFor(kcal,p){const w=+p.weight||70; const pk=p.strength?(p.goal==='lose'?2.0:1.6):(p.goal==='lose'?1.2:1.0);
+function macrosFor(kcal,p){const w=+p.weight||70; const pk=p.strength?(p.goal==='lose'?2.0:1.6):p.goal==='gain'?1.6:(p.goal==='lose'?1.2:1.0);
   const prot=Math.round(w*pk), fat=Math.round(kcal*0.3/9), fib=Math.max(30,Math.round(kcal/1000*14)), carb=Math.max(0,Math.round((kcal-prot*4-fat*9-fib*2)/4)); return {prot,fat,fib,carb,pk}}
 function goalAdj(tdee,p){if(p.goal==='lose')return -Math.min(p.rate*7700/7,tdee*0.25); if(p.goal==='gain')return Math.min(p.rate*7700/7,500); return 0}
 function calcGoals(p){const w=+p.weight,h=+p.height,a=+p.age; if(!(w>0&&h>0&&a>0))return null;
