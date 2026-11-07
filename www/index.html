@@ -95,6 +95,7 @@ textarea{resize:vertical}
 .facts .fr:last-child{border-bottom:0}.facts .fr.sub{padding-left:14px;font-size:14px;color:var(--muted)}.facts .fr.sub b{color:var(--ink)}.facts .fr b{white-space:nowrap}
 details.nut>summary{display:flex;justify-content:space-between;align-items:center;cursor:pointer;list-style:none}details.nut>summary::-webkit-details-marker{display:none}
 details.nut>summary h2::after{content:" ▾";font-size:.7em;color:var(--muted)}details.nut:not([open])>summary h2::after{content:" ▸"}
+.ampel{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.amp{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:4px 8px;border-radius:99px;background:var(--surface2)}.amp i{width:8px;height:8px;border-radius:50%}.amp b{font-weight:700}.amp.good i{background:var(--good)}.amp.warn i{background:var(--warn)}.amp.low i{background:var(--low)}
 .micro{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px}
 .mi .l{display:flex;justify-content:space-between;font-size:12.5px;gap:6px;margin-bottom:3px}
 .mi .l span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
@@ -754,6 +755,12 @@ function addAll(){const tm=(document.getElementById('mTime')||{}).value||nowHM()
   UI.sel=[]; UI.multi=false; UI.multiTime=null; closeSheet(); const after=streakInfo();
   toast(!before.todayDone&&after.todayDone?(after.cur>1?`Streak verlängert: ${after.cur} Tage`:'Streak gestartet!'):`${list.length} Lebensmittel eingetragen`);
   UI.tab='add'; UI.q=''; UI.online=[]; UI.usda=[]; UI.onlineState=''; UI.usdaState=''; render()}
+/* Lebensmittel-Ampel je 100 g (Grenzwerte wie auf Ampelkarten der Krankenkassen, nach britischem FSA-Schema; Getränke halbe Grenzen) */
+const AMPEL=[['fat','Fett',3,17.5],['sat','Ges. Fette',1.5,5],['sugar','Zucker',5,22.5],['salt','Salz',0.3,1.5]];
+const AMPEL_D={fat:[1.5,8.75],sat:[0.75,2.5],sugar:[2.5,11.25],salt:[0.3,0.75]};
+function ampelHtml(a){let per=null; if(a.unitMode==='g')per=a.per; else if(a.kind==='r'){const r=getRecipe(a.ref); const c=r&&recipeCalc(r); if(c&&c.grams>0)per=a.per.map(v=>v==null?null:v/c.grams*100)}
+  if(!per)return ''; const drink=a.unit==='ml';
+  return `<div class="ampel" aria-label="Ampel je 100 ${drink?'ml':'g'}">${AMPEL.map(([k,l,lo,hi])=>{if(drink)[lo,hi]=AMPEL_D[k]; const v=per[IDX[k]]||0; const c=v<=lo?'good':v>hi?'low':'warn'; return `<span class="amp ${c}"><i></i>${l}<b class="num">${fmt(v)} g</b></span>`}).join('')}<span class="tiny muted" style="flex-basis:100%">Ampel je 100 ${drink?'ml':'g'}: grün wenig, gelb mittel, rot viel</span></div>`}
 function sheetAmount(){
   const a=UI.amt; const f=a.unitMode==='g'?a.amt/100:a.amt; const n=a.per.map(v=>v*f);
   const quick=a.unitMode==='p'?[['½',0.5],['1',1],['1½',1.5],['2',2],['3',3]]:[...a.portions.map(p=>[p[0]+' ('+p[1]+' g)',p[1]]),['100 g',100]];
@@ -763,6 +770,7 @@ function sheetAmount(){
    <div class="row wrapr">${quick.map(q=>`<button class="sm" data-act="quick" data-v="${q[1]}">${esc(q[0])}</button>`).join('')}</div>
    <div class="row"><label for="amtTime" class="small muted" style="white-space:nowrap">Gegessen um</label><input id="amtTime" type="time" value="${a.time||(UI.date===today()?nowHM():MEALTIME[UI.meal])}" style="max-width:130px"></div>
    <div class="card"><div class="row" style="justify-content:space-between;align-items:baseline"><b class="num" style="font-family:var(--display);font-size:26px" id="amtK">${Math.round(n[0])} kcal</b><span class="pfc" id="amtM">E ${fmt(n[1])} g · K ${fmt(n[2])} g · F ${fmt(n[4])} g</span></div>
+   ${ampelHtml(a)}
    ${a.noMicro?'<div class="tiny muted" style="margin-top:6px">Für dieses Produkt sind keine Vitamine und Mineralstoffe hinterlegt.</div>':''}</div>
    <button class="primary" data-act="addentry">Eintragen</button><button data-act="close">Abbrechen</button></div>`);
   const ti=document.getElementById('amtTime'); ti.addEventListener('input',()=>{a.time=ti.value});
