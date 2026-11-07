@@ -96,6 +96,7 @@ textarea{resize:vertical}
 details.nut>summary{display:flex;justify-content:space-between;align-items:center;cursor:pointer;list-style:none}details.nut>summary::-webkit-details-marker{display:none}
 details.nut>summary h2::after{content:" ▾";font-size:.7em;color:var(--muted)}details.nut:not([open])>summary h2::after{content:" ▸"}
 .ampel{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.amp{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:4px 8px;border-radius:99px;background:var(--surface2)}.amp i{width:8px;height:8px;border-radius:50%}.amp b{font-weight:700}.amp.good i{background:var(--good)}.amp.warn i{background:var(--warn)}.amp.low i{background:var(--low)}
+.plate{margin:6px 0 4px}.plbar{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--line);margin-bottom:4px}.plbar i{display:block;height:100%}
 .micro{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px}
 .mi .l{display:flex;justify-content:space-between;font-size:12.5px;gap:6px;margin-bottom:3px}
 .mi .l span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
@@ -623,7 +624,7 @@ function vHeute(si){
   const entries=S.days[d]||[];
   const meals=MEALS.map(([m,l])=>{const es=entries.filter(e=>e.meal===m).sort((x,y)=>(entryTime(x,d)||'99').localeCompare(entryTime(y,d)||'99'));const k=es.reduce((a,e)=>a+e.n[0],0);
     return `<div class="meal"><div class="meal-h"><h3>${l}</h3><div class="row"><span class="kc small">${es.length?Math.round(k)+' kcal':''}</span><button class="sm" data-act="addmeal" data-meal="${m}" aria-label="${l} eintragen">+ Eintragen</button></div></div>
-    ${es.map(e=>`<div class="entry"><div class="grow"><div>${esc(e.name)}</div><div class="pfc">${entryTime(e,d)?entryTime(e,d)+' Uhr · ':''}${fmt(e.amt)} ${esc(e.unit)} · E ${fmt(e.n[1])} · K ${fmt(e.n[2])} · F ${fmt(e.n[4])}</div></div><span class="kc">${Math.round(e.n[0])}</span><button class="ghost" data-act="delentry" data-id="${e.id}" aria-label="Eintrag löschen">✕</button></div>`).join('')}</div>`}).join('');
+    ${es.map(e=>`<div class="entry"><div class="grow"><div>${esc(e.name)}</div><div class="pfc">${entryTime(e,d)?entryTime(e,d)+' Uhr · ':''}${fmt(e.amt)} ${esc(e.unit)} · E ${fmt(e.n[1])} · K ${fmt(e.n[2])} · F ${fmt(e.n[4])}</div></div><span class="kc">${Math.round(e.n[0])}</span><button class="ghost" data-act="delentry" data-id="${e.id}" aria-label="Eintrag löschen">✕</button></div>`).join('')}${plateHtml(es,m)}</div>`}).join('');
   const ref=REF[g.sex];
   const hasR=entries.some(e=>e.rng); const rl=MICRO.map((k,j)=>entries.reduce((s,e)=>s+(e.rng?e.rng[0][j]:e.n[IDX[k]]),0)), rh=MICRO.map((k,j)=>entries.reduce((s,e)=>s+(e.rng?e.rng[1][j]:e.n[IDX[k]]),0));
   const rr={hasR,rl,rh}; const grp=(title,keys,open)=>`<details class="card nut"${open?' open':''}><summary><h2>${title}</h2><span class="tiny muted" style="white-space:nowrap">% vom Bedarf</span></summary><div class="micro" style="margin-top:10px">${nutriRows(keys,t,entries,ref,rr)}</div></details>`;
@@ -761,6 +762,23 @@ const AMPEL_D={fat:[1.5,8.75],sat:[0.75,2.5],sugar:[2.5,11.25],salt:[0.3,0.75]};
 function ampelHtml(a){let per=null; if(a.unitMode==='g')per=a.per; else if(a.kind==='r'){const r=getRecipe(a.ref); const c=r&&recipeCalc(r); if(c&&c.grams>0)per=a.per.map(v=>v==null?null:v/c.grams*100)}
   if(!per)return ''; const drink=a.unit==='ml';
   return `<div class="ampel" aria-label="Ampel je 100 ${drink?'ml':'g'}">${AMPEL.map(([k,l,lo,hi])=>{if(drink)[lo,hi]=AMPEL_D[k]; const v=per[IDX[k]]||0; const c=v<=lo?'good':v>hi?'low':'warn'; return `<span class="amp ${c}"><i></i>${l}<b class="num">${fmt(v)} g</b></span>`}).join('')}<span class="tiny muted" style="flex-basis:100%">Ampel je 100 ${drink?'ml':'g'}: grün wenig, gelb mittel, rot viel</span></div>`}
+/* Mahlzeitenteller (ÖGK): etwa die Hälfte Gemüse/Obst, ein Viertel stärkereiche Beilage, ein Viertel Eiweiß */
+const PL_CAT={veg:['Gemüse','Obst','Pilze','Salate','Früchte','Sprossen','Kräuter'],starch:['Brot','Getreide','Beilagen','Reis','Teigwaren','Kartoffeln','Mehle','Flocken','Müesli','Mais','Knäcke'],prot:['Milch','Käse','Hülsenfrüchte','Soja','Fisch','Fleisch','Geflügel','Eier','wurst','Frischkäse','Joghurt','Rind','Schwein','Kalb','Lamm','Wild','Proteinlieferanten','Alternativen zu Fleisch','Meeresfrüchte','Tierarten']};
+const PL_KW={veg:['salat','gemuse','tomate','gurke','paprika','brokoli','karote','spinat','zuchini','apfel','banane','beere','obst','kohl','zwiebel','pilz'],starch:['brot','brotchen','reis','nudel','pasta','spageti','kartofel','haferflocken','musli','couscous','bulgur','quinoa','toast','wrap','tortila'],prot:['hahnchen','huhn','pute','rind','schwein','lachs','thunfisch','fisch',' ei ','eier','tofu','tempeh','seitan','linse','bohne','kichererbse','quark','joghurt','skyr','kase','skir','garnele']};
+function plateGroup(fid,name){let cat='';
+  if(fid&&fid.startsWith('bls')){const c=fid.slice(3); const a=c[0], b=c[1];
+    if(a==='G'||a==='F'||(a==='K'&&b==='7'))return 'veg'; if(a==='B'||a==='C'||(a==='E'&&b>='4')||(a==='K'&&b<='4'))return 'starch'; if((a==='E'&&b<'4')||a==='M'||a==='T'||a==='U'||a==='V'||a==='W'||(a==='H'&&(b==='7'||b==='8')))return 'prot'; if('NPQRS'.includes(a))return null}
+  else if(fid&&fid.startsWith('ch')&&CHI.has(fid.slice(2)))cat=CHI.get(fid.slice(2))[2];
+  else if(fid&&F[fid])cat=F[fid][1];
+  if(cat){for(const g in PL_CAT)if(PL_CAT[g].some(w=>cat.includes(w)))return g; if(/Getränk|Fett|Öl|Süß|Süss|Würz|Zucker|Schoko|Backen|Nüsse|drinks/.test(cat))return null}
+  const n=' '+phon(name||'')+' '; for(const g of ['prot','starch','veg'])if(PL_KW[g].some(w=>n.includes(w)))return g; return null}
+function plateOf(es){const g={veg:0,starch:0,prot:0};
+  es.forEach(e=>{if(e.kind==='r'){const r=getRecipe(e.ref); if(!r)return; const tot=r.ing.reduce((s,x)=>s+x[1],0)||1, eg=entryGrams(e); r.ing.forEach(([fid,gr])=>{const f=getFood(fid); const k=plateGroup(fid,f&&f.name); if(k)g[k]+=eg*gr/tot})}
+    else{const k=plateGroup(e.ref,e.name); const gr=entryGrams(e); if(k&&gr)g[k]+=gr}});
+  return g}
+function plateHtml(es,meal){if((meal!=='l'&&meal!=='d')||!es.length)return ''; const g=plateOf(es); const sum=g.veg+g.starch+g.prot; if(sum<120)return '';
+  const p=k=>Math.round(g[k]/sum*100); const tip=p('veg')<35?'Mehr Gemüse oder Obst: Auf dem ÖGK-Teller ist es etwa die Hälfte.':p('prot')<12?'Eine Eiweißquelle fehlt fast (z. B. Hülsenfrüchte, Fisch, Ei, Milchprodukte).':p('starch')>45?'Viel Beilage: Laut ÖGK-Teller reicht etwa ein Viertel.':'Passt gut zum ÖGK-Teller.';
+  return `<div class="plate"><div class="plbar"><i style="width:${p('veg')}%;background:var(--good)"></i><i style="width:${p('starch')}%;background:var(--carb)"></i><i style="width:${p('prot')}%;background:var(--prot)"></i></div><div class="tiny muted">Teller: Gemüse/Obst ${p('veg')} % (Ziel ~50) · Beilage ${p('starch')} % (~25) · Eiweiß ${p('prot')} % (~25). ${tip}</div></div>`}
 function sheetAmount(){
   const a=UI.amt; const f=a.unitMode==='g'?a.amt/100:a.amt; const n=a.per.map(v=>v*f);
   const quick=a.unitMode==='p'?[['½',0.5],['1',1],['1½',1.5],['2',2],['3',3]]:[...a.portions.map(p=>[p[0]+' ('+p[1]+' g)',p[1]]),['100 g',100]];
