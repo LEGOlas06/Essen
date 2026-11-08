@@ -421,7 +421,7 @@ async function connectCloud(){
     const snap=await db.collection(Store.base).get();
     if(snap.empty){ Store.mode='db'; if(Object.keys(S.days).length||Object.keys(S.foods).length||Object.keys(S.body).length) await Store.saveAll(); render(); return; }
     const n={settings:{...DEF_SETTINGS},foods:{},recipes:{},days:{},body:{},vorrat:{}};
-    snap.docs.forEach(doc=>{const v=doc.data(); if(doc.id==='meta'){n.settings={...DEF_SETTINGS,...(v.settings||{})};n.foods=v.foods||{};n.recipes=v.recipes||{};n.body=v.body||{};n.vorrat=v.vorrat||{}} else if(v&&v.date) n.days[v.date]=v.entries||[]});
+    snap.docs.forEach(doc=>{/* Die Datenbank liefert eingefrorene Objekte: tief kopieren, damit die App sie ändern kann */ const v=JSON.parse(JSON.stringify(doc.data()||{})); if(doc.id==='meta'){n.settings={...DEF_SETTINGS,...(v.settings||{})};n.foods=v.foods||{};n.recipes=v.recipes||{};n.body=v.body||{};n.vorrat=v.vorrat||{}} else if(v&&v.date) n.days[v.date]=v.entries||[]});
     S=n; Store.mode='db'; Store.saveLocal(); render();
   }catch(e){console.warn(e)}
 }
