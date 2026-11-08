@@ -682,7 +682,8 @@ function vHeute(si){
   <section class="card meals2">${meals}</section>
   <h2 class="sec">Trinken</h2>
   <section class="card stack" style="gap:8px;align-items:center;text-align:center"><span class="muted small">Ziel ${(wg/1000).toFixed(2).replace('.',',')} l${fw?' · aus dem Essen schon ca. '+fw.toLocaleString('de-DE')+' ml':''}</span><b class="wbig num">${(w/1000).toFixed(2).replace('.',',')} l</b>
-    <div class="glasses">${glasses}</div><span class="tiny muted">Tippe auf ein Glas für 250 ml</span></section>
+    <div class="glasses">${glasses}</div>
+    <div class="row wrapr" style="justify-content:center"><button class="sm" data-act="water" data-ml="250">+ Glas 250 ml</button><button class="sm" data-act="water" data-ml="500">+ Flasche 500 ml</button><button class="sm" data-act="water" data-ml="-250" ${w?'':'disabled'} aria-label="250 ml abziehen">− 250</button></div></section>
   <h2 class="sec">Aktivität</h2>
   <section class="card stack" style="gap:10px">
    <div class="hc"><div><span class="tiny muted">Schritte</span><b>${bd.steps!=null?bd.steps.toLocaleString('de-DE'):'–'}</b></div><div><span class="tiny muted">Aktiv</span><b>${bd.burn!=null?bd.burn:'–'}</b><span class="tiny muted">kcal</span></div><div><span class="tiny muted">Gewicht</span><b>${bd.w!=null?fmt(bd.w):'–'}</b><span class="tiny muted">kg</span></div></div>
