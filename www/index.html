@@ -97,6 +97,19 @@ details.nut>summary{display:flex;justify-content:space-between;align-items:cente
 details.nut>summary h2::after{content:" ▾";font-size:.7em;color:var(--muted)}details.nut:not([open])>summary h2::after{content:" ▸"}
 .ampel{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.amp{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:4px 8px;border-radius:99px;background:var(--surface2)}.amp i{width:8px;height:8px;border-radius:50%}.amp b{font-weight:700}.amp.good i{background:var(--good)}.amp.warn i{background:var(--warn)}.amp.low i{background:var(--low)}
 .plate{margin:6px 0 4px}.plbar{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--line);margin-bottom:4px}.plbar i{display:block;height:100%}
+.buddy{display:flex;align-items:flex-end;gap:8px;justify-content:flex-end}.buddy .bub{flex:1;background:var(--surface);border:1px solid var(--line);border-radius:18px 18px 4px 18px;padding:10px 14px;font-size:14px;line-height:1.35}
+.mascot{flex:none;filter:drop-shadow(0 4px 10px rgba(255,120,50,.35))}@media (prefers-reduced-motion:no-preference){.buddy .mascot{animation:bob 3s ease-in-out infinite}@keyframes bob{50%{transform:translateY(-4px) rotate(-2deg)}}}
+.hero2 .g3{display:grid;grid-template-columns:1fr 1.5fr 1fr;align-items:center;text-align:center}.hero2 .side{display:flex;flex-direction:column;gap:2px}.hero2 .side b{font-family:var(--display);font-size:22px}
+.gwrap{position:relative}.gauge{width:100%;display:block}.gmid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding-top:16%}.gmid b{font-family:var(--display);font-size:26px;line-height:1}
+.m3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:6px;text-align:center}.m3>div{display:flex;flex-direction:column;gap:6px;min-width:0}.ell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+h2.sec{font-family:var(--display);font-size:22px;margin:10px 2px -2px}
+.meals2{padding:4px 14px}.mrow{border-bottom:1px solid var(--line)}.mrow:last-child{border-bottom:0}.mrow>summary{display:flex;align-items:center;gap:12px;padding:12px 0;cursor:pointer;list-style:none}.mrow>summary::-webkit-details-marker{display:none}
+.mic{position:relative;width:52px;height:52px;flex:none}.mic svg{width:52px;height:52px}.mic i{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:22px}
+.mrow .grow{display:flex;flex-direction:column;gap:2px;min-width:0}.mname{font-size:17px}
+.plus{width:44px;height:44px;border-radius:50%;background:var(--ink);color:var(--bg);font-size:26px;line-height:1;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0;border:0;flex:none}
+.mbody{padding:0 0 8px}
+.wbig{font-family:var(--display);font-size:34px}.glasses{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}.glass{position:relative;background:none;border:0;padding:2px;min-height:0}.gplus{position:absolute;left:0;right:0;top:9px;font-weight:800;color:var(--ink);font-size:16px}
+button.chip-streak{cursor:pointer;font:inherit;color:inherit}
 .micro{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px}
 .mi .l{display:flex;justify-content:space-between;font-size:12.5px;gap:6px;margin-bottom:3px}
 .mi .l span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
@@ -210,7 +223,7 @@ nav.tabs button.add svg{background:var(--accent);width:36px;height:36px;padding:
 <div class="wrap">
   <header class="top">
     <div class="brand"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="var(--flame)" d="M12 2c1 3.2 5.5 5.6 5.5 11a5.5 5.5 0 0 1-11 0c0-2.6 1.4-4.3 2.6-5.4.2 1.7 1 2.9 2.2 3.4C10.8 8 11.5 5 12 2z"/></svg>Tellerflamme</div>
-    <div class="chip-streak" id="chipStreak" title="Aktueller Streak"></div>
+    <button class="chip-streak" id="chipStreak" data-act="streak" title="Streak ansehen"></button>
   </header>
   <main id="view"></main>
 </div>
@@ -581,7 +594,7 @@ function render(){
   renderTabs();
   const si=streakInfo();
   document.getElementById('chipStreak').innerHTML=FLAME+`<span>${si.cur}</span>`;
-  pushWidget(si);
+  pushWidget(si); notifSoon();
   const v=document.getElementById('view');
   v.innerHTML=({heute:vHeute,add:vAdd,rezepte:vRezepte,statistik:vStats,mehr:vMehr})[UI.tab](si);
   if(UI.tab==='add'){const i=document.getElementById('q'); if(i&&UI.focusQ){i.focus();i.setSelectionRange(i.value.length,i.value.length);UI.focusQ=false}}
@@ -616,36 +629,69 @@ function streakCard(si){
   <div class="row small" style="margin-top:12px;justify-content:space-between"><span class="muted">Nächstes Abzeichen: <b style="color:var(--ink)">${next} Tage</b></span><span class="muted">Freezes: <b style="color:var(--ice)">${si.freezes}/2</b></span></div>
   <div style="margin-top:6px">${bar((si.cur-prev)/(next-prev)*100,'linear-gradient(90deg,var(--flame2),var(--flame))')}</div></section>`;
 }
+/* Flämmchen, das Maskottchen (eigene Figur) */
+function mascot(size=64,mood='happy'){const eyes=mood==='sleepy'?'<path d="M22 37q3 2 6 0M36 37q3 2 6 0" stroke="#2a1608" stroke-width="2.4" fill="none" stroke-linecap="round"/>':'<ellipse cx="25" cy="37" rx="3" ry="3.6" fill="#2a1608"/><ellipse cx="39" cy="37" rx="3" ry="3.6" fill="#2a1608"/><circle cx="26" cy="35.6" r="1.1" fill="#fff"/><circle cx="40" cy="35.6" r="1.1" fill="#fff"/>';
+  const mouth=mood==='wow'?'<ellipse cx="32" cy="46" rx="3" ry="3.4" fill="#2a1608"/>':'<path d="M27 44q5 5 10 0" stroke="#2a1608" stroke-width="2.4" fill="none" stroke-linecap="round"/>';
+  return `<svg class="mascot" width="${size}" height="${size}" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="mf${mood}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd166"/><stop offset=".55" stop-color="#ff9f43"/><stop offset="1" stop-color="#ff6b35"/></linearGradient></defs>
+  <path d="M32 3c3 9 18 15 18 33a18 18 0 0 1-36 0c0-8 4.5-13.5 8.5-17 .6 5.4 3.2 9 7 10.6C27.6 21.6 29.6 12 32 3z" fill="url(#mf${mood})"/>
+  <path d="M32 26c2 5 9 8 9 16a9 9 0 0 1-18 0c0-4 2-6.6 4-8.4.4 2.6 1.6 4 3.4 4.6C29.6 34.4 30.6 30 32 26z" fill="#fff3c4" opacity=".55"/>
+  ${eyes}<ellipse cx="20" cy="43" rx="3.2" ry="2" fill="#ff6b8a" opacity=".55"/><ellipse cx="44" cy="43" rx="3.2" ry="2" fill="#ff6b8a" opacity=".55"/>${mouth}</svg>`}
+function flameTip(d,t,goal,si,entries){const h=new Date().getHours(), g=S.settings, isT=d===today(); const w=(S.body[d]&&S.body[d].water)||0, wg=drinkGoal(d);
+  if(!isT)return ['happy',entries.length?`An diesem Tag hast du ${Math.round(t[0])} kcal eingetragen.`:'An diesem Tag ist nichts eingetragen.'];
+  if(!entries.length&&h>=18&&si.cur>0)return ['wow',`Trag heute noch etwas ein, sonst geht dein ${si.cur}-Tage-Streak verloren!`];
+  if(!entries.length)return ['happy',h<11?'Guten Morgen! Was gab’s zum Frühstück?':h<15?'Hallo! Was gab’s heute schon zu essen?':'Na, was gab’s heute Leckeres?'];
+  if(t[0]>=goal*0.9&&t[1]>=g.prot*0.9)return ['happy','Stark! Kalorien und Eiweiß für heute geschafft.'];
+  if(h>=15&&w<wg*0.5)return ['happy',`Zeit für ein Glas Wasser, noch ${((wg-w)/1000).toFixed(1).replace('.',',')} l bis zum Ziel.`];
+  if(h>=14&&t[1]<g.prot*0.5)return ['happy',`Noch ${Math.round(g.prot-t[1])} g Eiweiß offen. Skyr, Eier oder Linsen helfen.`];
+  if(t[6]<g.fib*0.3&&h>=16)return ['happy','Ein bisschen Gemüse oder Obst bringt Ballaststoffe und Vitamine.'];
+  return ['happy',`Noch ${Math.max(0,Math.round(goal-t[0]))} kcal übrig. Weiter so!`]}
+const MEALICON={b:'☕',l:'🍝',d:'🥗',s:'🍎'}, MEALSHARE={b:0.3,l:0.4,d:0.25,s:0.05};
+const GLASS=(full)=>`<svg viewBox="0 0 32 40" width="30" height="38" aria-hidden="true"><path d="M4 4h24l-3 32a3 3 0 0 1-3 2.7H10A3 3 0 0 1 7 36z" fill="${full?'#5ab8ff':'var(--surface2)'}" stroke="${full?'#8fd0ff':'var(--line)'}" stroke-width="1.5"/>${full?'<path d="M6.4 12h19.2" stroke="#bfe5ff" stroke-width="2" opacity=".7"/>':''}</svg>`;
+function gauge(eaten,goal,burn){const p=Math.max(0,Math.min(1,eaten/goal)); const R=74, L=Math.PI*R*1.5; const over=eaten>goal*1.05;
+  return `<svg viewBox="0 0 180 150" class="gauge" role="img" aria-label="${Math.round(eaten)} von ${goal} kcal"><g transform="rotate(135 90 90)"><circle cx="90" cy="90" r="${R}" fill="none" stroke="var(--surface2)" stroke-width="12" stroke-linecap="round" stroke-dasharray="${L} 999"/>
+   <circle cx="90" cy="90" r="${R}" fill="none" stroke="${over?'var(--low)':'var(--accent)'}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${Math.max(0.01,L*p)} 999"/></g></svg>`}
 function vHeute(si){
   const d=UI.date, t=dayTotals(d), g=S.settings, goal=dayGoal(d), bd=S.body[d]||{};
-  const kp=t[0]/goal, C=2*Math.PI*52;
-  const rest=Math.round(goal-t[0]);
-  const macro=(k,l,c,goal)=>`<div><div class="l"><span>${l}</span><span class="num muted">${fmt(t[IDX[k]])} / ${goal} g</span></div>${bar(t[IDX[k]]/goal*100,c)}</div>`;
-  const entries=S.days[d]||[];
-  const meals=MEALS.map(([m,l])=>{const es=entries.filter(e=>e.meal===m).sort((x,y)=>(entryTime(x,d)||'99').localeCompare(entryTime(y,d)||'99'));const k=es.reduce((a,e)=>a+e.n[0],0);
-    return `<div class="meal"><div class="meal-h"><h3>${l}</h3><div class="row"><span class="kc small">${es.length?Math.round(k)+' kcal':''}</span><button class="sm" data-act="addmeal" data-meal="${m}" aria-label="${l} eintragen">+ Eintragen</button></div></div>
-    ${es.map(e=>`<div class="entry"><div class="grow"><div>${esc(e.name)}</div><div class="pfc">${entryTime(e,d)?entryTime(e,d)+' Uhr · ':''}${fmt(e.amt)} ${esc(e.unit)} · E ${fmt(e.n[1])} · K ${fmt(e.n[2])} · F ${fmt(e.n[4])}</div></div><span class="kc">${Math.round(e.n[0])}</span><button class="ghost" data-act="delentry" data-id="${e.id}" aria-label="Eintrag löschen">✕</button></div>`).join('')}${plateHtml(es,m)}</div>`}).join('');
+  const rest=Math.round(goal-t[0]); const entries=S.days[d]||[];
+  const meals=MEALS.map(([m,l])=>{const es=entries.filter(e=>e.meal===m).sort((x,y)=>(entryTime(x,d)||'99').localeCompare(entryTime(y,d)||'99'));const k=es.reduce((a,e)=>a+e.n[0],0); const mg=Math.round(goal*MEALSHARE[m]); const p=Math.min(1,k/mg), C=2*Math.PI*25;
+    return `<details class="mrow"${UI.openMeal===m?' open':''} data-meal="${m}"><summary><span class="mic"><svg viewBox="0 0 60 60" aria-hidden="true"><circle cx="30" cy="30" r="25" fill="none" stroke="var(--surface2)" stroke-width="5"/><circle cx="30" cy="30" r="25" fill="none" stroke="var(--accent)" stroke-width="5" stroke-linecap="round" stroke-opacity="${p>0?1:0}" stroke-dasharray="${C*p} ${C}" transform="rotate(-90 30 30)"/></svg><i>${MEALICON[m]}</i></span>
+      <span class="grow"><b class="mname">${l}${es.length?' <span class="tiny muted">('+es.length+')</span>':''}</b><span class="muted small num">${Math.round(k)} / ${mg} kcal</span></span>
+      <button class="plus" data-act="addmeal" data-meal="${m}" aria-label="${l} eintragen">+</button></summary>
+    <div class="mbody">${es.length?es.map(e=>`<div class="entry"><div class="grow"><div>${esc(e.name)}</div><div class="pfc">${entryTime(e,d)?entryTime(e,d)+' Uhr · ':''}${fmt(e.amt)} ${esc(e.unit)} · E ${fmt(e.n[1])} · K ${fmt(e.n[2])} · F ${fmt(e.n[4])}</div></div><span class="kc">${Math.round(e.n[0])}</span><button class="ghost" data-act="delentry" data-id="${e.id}" aria-label="Eintrag löschen">✕</button></div>`).join('')+plateHtml(es,m):'<div class="tiny muted" style="padding:6px 0">Noch nichts eingetragen.</div>'}</div></details>`}).join('');
   const ref=REF[g.sex];
   const hasR=entries.some(e=>e.rng); const rl=MICRO.map((k,j)=>entries.reduce((s,e)=>s+(e.rng?e.rng[0][j]:e.n[IDX[k]]),0)), rh=MICRO.map((k,j)=>entries.reduce((s,e)=>s+(e.rng?e.rng[1][j]:e.n[IDX[k]]),0));
   const rr={hasR,rl,rh}; const grp=(title,keys,open)=>`<details class="card nut"${open?' open':''}><summary><h2>${title}</h2><span class="tiny muted" style="white-space:nowrap">% vom Bedarf</span></summary><div class="micro" style="margin-top:10px">${nutriRows(keys,t,entries,ref,rr)}</div></details>`;
   const hasOFFnoMicro=entries.some(e=>e.noMicro);
+  const [mood,tip]=flameTip(d,t,goal,si,entries);
+  const burn=bd.burn||0;
+  /* Wasser */
+  const w=bd.water||0, wg=drinkGoal(d), ng=Math.max(4,Math.ceil(wg/250)), fw=S.settings.waterFood===false?0:foodWater(d);
+  const glasses=Array.from({length:ng},(_,i)=>`<button class="glass" data-act="glass" data-i="${i}" aria-label="${(i+1)*250} ml">${GLASS((i+1)*250<=w)}${i===Math.floor(w/250)?'<span class="gplus">+</span>':''}</button>`).join('');
+  /* Nährstoff-Kurzfassung: die drei größten Lücken */
+  const gaps=entries.length?MICRO.map(k=>[k,(t[IDX[k]]||0)/ref[k]*100]).sort((a,b)=>a[1]-b[1]).slice(0,3):[];
   return `<div class="stack">
-  ${d===today()?streakCard(si):''}
   <div class="datebar"><button class="ghost" data-act="day" data-d="-1" aria-label="Vorheriger Tag">‹</button><b>${fmtDate(d)}</b><button class="ghost" data-act="day" data-d="1" ${d>=today()?'disabled':''} aria-label="Nächster Tag">›</button></div>
-  <section class="card hero stack" style="gap:12px">
-    <div class="row" style="align-items:baseline;gap:8px;flex-wrap:wrap"><b class="big" style="color:${rest<0?'var(--low)':'var(--accent)'}">${Math.abs(rest)}</b><span class="muted">${rest>=0?'kcal übrig':'kcal drüber'} · ${Math.round(t[0])} von ${goal}</span></div>
-    ${bar(kp*100,kp>1.1?'var(--low)':'var(--accent)')}
-    <div class="tiles">${[['prot','Eiweiß','var(--prot)',g.prot],['carb','KH','var(--carb)',g.carb],['fat','Fett','var(--fat)',g.fat],['fib','Ballast','var(--fib)',g.fib]].map(([k,l,c,gl])=>`<div class="tile"><span class="label" style="font-size:10px;letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${l}</span><b>${Math.round(t[IDX[k]])}</b><span class="tiny" style="white-space:nowrap">/ ${gl} g</span>${bar(t[IDX[k]]/gl*100,c)}</div>`).join('')}</div>
+  <section class="buddy"><div class="bub">${esc(tip)}</div>${mascot(58,mood)}</section>
+  <section class="card hero2">
+    <div class="g3"><div class="side"><b class="num">${Math.round(t[0])}</b><span class="muted small">Gegessen</span></div>
+      <div class="gwrap">${gauge(t[0],goal,burn)}<div class="gmid"><b class="num" style="color:${rest<0?'var(--low)':'var(--ink)'}">${Math.abs(rest)}</b><span class="muted small">${rest>=0?'Übrig':'Drüber'}</span></div></div>
+      <div class="side"><b class="num">${burn}</b><span class="muted small">Verbrannt</span></div></div>
+    <div class="m3">${[['carb','Kohlenhydrate','var(--carb)',g.carb],['prot','Eiweiß','var(--prot)',g.prot],['fat','Fett','var(--fat)',g.fat]].map(([k,l,c,gl])=>`<div><span class="small muted ell">${l}</span>${bar(t[IDX[k]]/gl*100,c)}<b class="small num">${Math.round(t[IDX[k]])} / ${gl} g</b></div>`).join('')}</div>
   </section>
-  <section class="card">${meals}</section>
-  ${waterCard(d)}
-  <section class="card stack" style="gap:10px"><div class="row" style="justify-content:space-between"><h3>Aktivität &amp; Gewicht</h3>${g.useBurn&&bd.burn?`<span class="tiny muted">+${Math.round(bd.burn*g.burnFactor)} kcal aufs Ziel</span>`:''}</div>
-   ${g.hcSync||bd.hc?`<div class="hc"><div><span class="tiny muted">Aktivkalorien</span><b>${bd.burn!=null?bd.burn:'–'}</b><span class="tiny muted">kcal</span></div><div><span class="tiny muted">Schritte</span><b>${bd.steps!=null?bd.steps.toLocaleString('de-DE'):'–'}</b><span class="tiny muted">${UI.date===today()?'seit 0 Uhr':'am Tag'}</span></div><div><span class="tiny muted">Gewicht</span><b>${bd.w!=null?fmt(bd.w):'–'}</b><span class="tiny muted">kg</span></div></div>
-   <div class="row" style="justify-content:space-between"><span class="tiny muted">Aus Health Connect${g.hcLast?' · Stand '+new Date(g.hcLast).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):''}</span>${nativeHealth()?'<button class="sm" data-act="hc">Aktualisieren</button>':''}</div>
-   <details><summary class="small">Von Hand ändern</summary><div class="grid2" style="margin-top:8px">${bodyInputs(bd)}</div></details>`
-   :`<div class="grid2">${bodyInputs(bd)}</div>${nativeHealth()?'<button class="sm" data-act="hc">Mit Health Connect verbinden</button>':''}`}
-   ${g.useBurn?'':'<div class="tiny muted">Aktivkalorien zählen erst zum Ziel, wenn du das unter „Ziele“ einschaltest.</div>'}
+  <h2 class="sec">Ernährung</h2>
+  <section class="card meals2">${meals}</section>
+  <h2 class="sec">Trinken</h2>
+  <section class="card stack" style="gap:8px;align-items:center;text-align:center"><span class="muted small">Ziel ${(wg/1000).toFixed(2).replace('.',',')} l${fw?' · aus dem Essen schon ca. '+fw.toLocaleString('de-DE')+' ml':''}</span><b class="wbig num">${(w/1000).toFixed(2).replace('.',',')} l</b>
+    <div class="glasses">${glasses}</div><span class="tiny muted">Tippe auf ein Glas für 250 ml</span></section>
+  <h2 class="sec">Aktivität</h2>
+  <section class="card stack" style="gap:10px">
+   <div class="hc"><div><span class="tiny muted">Schritte</span><b>${bd.steps!=null?bd.steps.toLocaleString('de-DE'):'–'}</b></div><div><span class="tiny muted">Aktiv</span><b>${bd.burn!=null?bd.burn:'–'}</b><span class="tiny muted">kcal</span></div><div><span class="tiny muted">Gewicht</span><b>${bd.w!=null?fmt(bd.w):'–'}</b><span class="tiny muted">kg</span></div></div>
+   <details><summary class="small">${nativeHealth()?'Health Connect & von Hand':'Von Hand eintragen'}</summary><div class="grid2" style="margin-top:8px">${bodyInputs(bd)}</div>${nativeHealth()?`<button class="sm" data-act="hc" style="margin-top:8px">${g.hcSync?'Aktualisieren':'Mit Health Connect verbinden'}</button>`:''}${g.useBurn?'':'<div class="tiny muted" style="margin-top:6px">Aktivkalorien zählen erst zum Ziel, wenn du das unter „Ziele“ einschaltest.</div>'}</details>
   </section>
+  ${entries.length?`<h2 class="sec">Nährstoffe</h2>
+  <section class="card stack" style="gap:10px"><div class="tiny muted">Am meisten fehlt heute:</div>${gaps.map(([k,p])=>`<div><div class="l row" style="justify-content:space-between"><span class="small">${NI[k][0]}</span><b class="small num">${Math.round(p)} %</b></div>${bar(p,microColor(p))}</div>`).join('')}
+   <button class="sm" data-act="details">${UI.showDetails?'Details ausblenden':'Alle Nährwerte und Qualität ansehen'}</button></section>`:''}
+  ${entries.length&&UI.showDetails?`
   ${factsCard(entries,t)}
   ${indicesCard(entries,t)}
   ${grp('Vitamine',VITS,true)}
@@ -653,7 +699,7 @@ function vHeute(si){
   ${grp('Spurenelemente',TRACE,true)}
   ${hasR?'<div class="note">Manche Werte sind aus Zutatenlisten geschätzt. Der hellere Bereich im Balken und die Zahl mit ≈ zeigen die wahrscheinliche Spanne.</div>':''}
   ${hasOFFnoMicro?'<div class="note">Bei manchen gescannten Produkten fehlen Angaben zu Vitaminen und Mineralstoffen. Die Werte sind dann zu niedrig.</div>':''}
-  ${entries.length&&entries.some(e=>e.n.length<NK.length)?'<div class="note">Einträge von vor diesem Update haben noch keine Werte zu Fettsäuren, Spurenelementen und Aminosäuren. Neue Einträge haben sie.</div>':''}
+  ${entries.some(e=>e.n.length<NK.length)?'<div class="note">Einträge von vor diesem Update haben noch keine Werte zu Fettsäuren, Spurenelementen und Aminosäuren. Neue Einträge haben sie.</div>':''}`:''}
   </div>`;
 }
 
@@ -1338,6 +1384,7 @@ function vMehr(){const g=S.settings;
   <section class="card stack" style="gap:10px"><h3>Tagesziele</h3><div class="small muted">Vom Rechner ausgefüllt oder selbst eingetragen.</div><div class="grid2">${f('kcal','Kalorien','kcal')}${f('prot','Eiweiß','g')}${f('carb','Kohlenhydrate','g')}${f('fat','Fett','g')}${f('fib','Ballaststoffe','g')}${f('waterGoal','Trinken','ml')}</div>
    <label class="row small"><input type="checkbox" id="g-waterFood" style="width:auto" ${S.settings.waterFood!==false?'checked':''}> Wasser aus dem Essen (Obst, Suppe, Joghurt …) vom Trinkziel abziehen. Das Trinkziel oben ist dann der Gesamtbedarf.</label>
    <button class="primary" data-act="savegoals">Ziele speichern</button></section>
+  ${notifCard()}
   ${appCard()}
   ${haCard()}
   <section class="card stack" style="gap:8px"><h3>So funktioniert der Streak</h3><div class="small">Jeder Tag mit mindestens einem Eintrag zählt. Nach je 7 Tagen am Stück bekommst du einen Freeze (höchstens 2). Verpasst du einen Tag, springt automatisch ein Freeze ein und dein Streak bleibt. Abzeichen gibt es bei 3, 7, 14, 30, 50, 100, 200 und 365 Tagen.</div></section>
@@ -1383,6 +1430,9 @@ document.addEventListener('click',async ev=>{
     case 'maddall':addAll();break;
     case 'updcheck':checkUpdate(true);break;
     case 'donemeal':UI.tab='heute';UI.q='';window.scrollTo(0,0);render();break;
+    case 'glass':{const b=S.body[UI.date]=S.body[UI.date]||{}; const i=+el.dataset.i, cur=b.water||0; const nv=(i+1)*250<=cur?i*250:(i+1)*250; const before=cur; b.water=nv; if(!b.water)delete b.water; if(!Object.keys(b).length)delete S.body[UI.date]; Store.saveMeta(); render(); const g=drinkGoal(UI.date); if(nv>before&&nv>=g&&before<g)toast('Trinkziel geschafft!'); try{notifResched()}catch(e){} break}
+    case 'details':UI.showDetails=!UI.showDetails; render(); break;
+    case 'streak':openSheet(streakCard(streakInfo())+'<button data-act="close" style="margin-top:12px;width:100%">Schließen</button>'); break;
     case 'water':{const b=S.body[UI.date]=S.body[UI.date]||{}; b.water=Math.max(0,(b.water||0)+(+el.dataset.ml)); if(!b.water)delete b.water; if(!Object.keys(b).length)delete S.body[UI.date]; Store.saveMeta(); render(); const g=drinkGoal(UI.date); if(+el.dataset.ml>0&&b.water>=g&&b.water-(+el.dataset.ml)<g)toast('Trinkziel geschafft!'); break}
     case 'meal':UI.meal=el.dataset.meal;render();break;
     case 'pick':{const k=el.dataset.kind,id=el.dataset.id; if(UI.multi){toggleSel(k,id);break} if(k==='o'){const f=UI.online.find(x=>x.code===id)||UI.usda.find(x=>x.code===id); S.foods[f.id]=f; Store.saveMeta(); openAmount('f',f.id,f)} else openAmount(k,id); break}
@@ -1440,6 +1490,9 @@ document.addEventListener('change',ev=>{const id=ev.target.id;
     if(id==='b-burn'){if(v>=0)b.burn=Math.round(v);else delete b.burn} else {if(v>0){b.w=Math.round(v*10)/10; if(UI.date===today())S.settings.weight=b.w}else delete b.w}
     if(!Object.keys(b).length)delete S.body[UI.date]; Store.saveMeta(); setTimeout(render,0); toast('Gespeichert')}
   else if(id==='g-waterFood'){S.settings.waterFood=ev.target.checked; Store.saveMeta(); setTimeout(render,0)}
+  else if(id==='nt-on'){notifToggle(ev.target.checked)}
+  else if(ev.target.dataset&&ev.target.dataset.ntc){S.settings.notif={...notifCfg(),[ev.target.dataset.ntc]:ev.target.checked}; Store.saveMeta(); notifSoon()}
+  else if(ev.target.dataset&&ev.target.dataset.nt){S.settings.notif={...notifCfg(),[ev.target.dataset.nt]:ev.target.value}; Store.saveMeta(); notifSoon()}
   else if(['p-useBurn','p-goal'].includes(id)){const p=readProfile(); Object.assign(S.settings,{age:p.age,height:p.height,weight:p.weight,sex:p.sex,useBurn:p.useBurn,pal:p.pal,goal:p.goal,rate:p.rate,strength:p.strength}); Store.saveMeta(); UI.calc=null; setTimeout(render,0)}
 });
 document.getElementById('healthFile').addEventListener('change',e=>{const f=[...e.target.files]; if(f.length)importHealth(f); e.target.value=''});
@@ -1595,6 +1648,39 @@ setInterval(()=>{if(document.visibilityState==='visible'&&haOn()&&!HA.busy)haSyn
 const APP_VERSION='__APP_VERSION__', UPD_BASE='https://legolas06.github.io/Essen/';
 function updater(){try{return window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()&&Capacitor.Plugins&&Capacitor.Plugins.CapacitorUpdater||null}catch(e){return null}}
 let updBusy=false, updLast=0, updId=null;
+/* ---------- Benachrichtigungen (nur in der App, lokal auf dem Handy) ---------- */
+const NOTIF_DEF={on:false,meals:true,streak:true,water:true,b:'08:30',l:'12:30',d:'18:30',st:'20:00'};
+function notifCfg(){return {...NOTIF_DEF,...(S.settings.notif||{})}}
+function LN(){try{return window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()&&Capacitor.Plugins&&Capacitor.Plugins.LocalNotifications||null}catch(e){return null}}
+const NT={b:[['Guten Morgen! ☕','Was gab’s zum Frühstück? Tipp hier, um es einzutragen.'],['Frühstückszeit 🥣','Flämmchen ist neugierig: Was hast du gegessen?']],
+  l:[['Mittagszeit! 🍝','Tipp hier, um dein Mittagessen einzutragen.'],['Hunger? 🥗','Vergiss nicht, dein Mittagessen einzutragen.']],
+  d:[['Abendessen 🍽️','Was gab’s heute Abend? Kurz eintragen und fertig.'],['Fast geschafft 🌙','Noch das Abendessen eintragen, dann ist der Tag komplett.']],
+  st:[['Dein Streak wartet! 🔥','Trag heute noch etwas ein, sonst geht dein Streak verloren.'],['Flämmchen wird kleiner … 🔥','Ein Eintrag reicht, um deinen Streak zu retten.']],
+  w:[['Schluck Wasser? 💧','Du liegst noch hinter deinem Trinkziel. Ein Glas wäre super.'],['Trinkpause 💧','Ein Glas Wasser jetzt und du bist wieder auf Kurs.']]};
+function pick(a,seed){return a[seed%a.length]}
+function atTime(day,hm){const [h,m]=hm.split(':').map(Number); const d=dObj(day); d.setHours(h,m,0,0); return d}
+let notifTimer=null;
+function notifSoon(){clearTimeout(notifTimer); notifTimer=setTimeout(()=>{notifResched().catch(()=>{})},1500)}
+async function notifResched(){const P=LN(); if(!P)return; const c=notifCfg();
+  try{const pend=await P.getPending(); const mine=(pend.notifications||[]).filter(n=>n.id>=9000&&n.id<9100).map(n=>({id:n.id})); if(mine.length)await P.cancel({notifications:mine})}catch(e){}
+  if(!c.on)return;
+  const now=Date.now(), list=[], t0=today();
+  for(let off=0;off<3;off++){const day=addDays(t0,off), es=S.days[day]||[], seed=dObj(day).getDate();
+    const add=(id,at,[title,body],extra)=>{if(at.getTime()>now+60000)list.push({id:9000+off*10+id,title,body,schedule:{at,allowWhileIdle:true},extra:extra||{}})};
+    if(c.meals)['b','l','d'].forEach((m,i)=>{if(!es.some(e=>e.meal===m))add(i,atTime(day,c[m]),pick(NT[m],seed),{meal:m})});
+    if(c.streak&&!es.length)add(3,atTime(day,c.st),pick(NT.st,seed),{meal:'s'});
+    if(c.water){const w=(S.body[day]&&S.body[day].water)||0, g=drinkGoal(day); if(w<g*0.45)add(4,atTime(day,'15:00'),pick(NT.w,seed)); if(w<g*0.8)add(5,atTime(day,'19:00'),pick(NT.w,seed+1))}}
+  if(list.length)try{await P.schedule({notifications:list})}catch(e){console.warn('Benachrichtigungen',e)}}
+async function notifToggle(on){const P=LN(); const c=notifCfg(); if(on&&P){try{let st=await P.checkPermissions(); if(st.display!=='granted')st=await P.requestPermissions(); if(st.display!=='granted'){toast('Benachrichtigungen sind in den Android-Einstellungen blockiert.'); on=false}}catch(e){}}
+  S.settings.notif={...c,on}; Store.saveMeta(); render(); notifResched().catch(()=>{}); if(on)toast('Flämmchen erinnert dich ab jetzt.')}
+function notifCard(){const c=notifCfg(), nat=!!LN();
+  const tf=(k,l)=>`<div class="field"><label for="nt-${k}">${l}</label><input id="nt-${k}" type="time" value="${c[k]}" data-nt="${k}"></div>`;
+  const cb=(k,l)=>`<label class="row small"><input type="checkbox" style="width:auto" data-ntc="${k}" ${c[k]?'checked':''}> ${l}</label>`;
+  return `<section class="card stack" style="gap:10px"><div class="row" style="justify-content:space-between;align-items:center"><h3>Benachrichtigungen</h3>${mascot(36)}</div>
+   ${nat?`<label class="row"><input type="checkbox" style="width:auto" id="nt-on" ${c.on?'checked':''}> <b>Flämmchen darf mich erinnern</b></label>
+   <div class="tiny muted">Nur wenn es etwas bringt: an eine Mahlzeit, wenn sie zur Uhrzeit noch fehlt; abends an den Streak, wenn heute nichts drin ist; ans Trinken, wenn du hinterherhinkst.</div>
+   ${c.on?`${cb('meals','Mahlzeit vergessen')}<div class="grid3">${tf('b','Frühstück')}${tf('l','Mittag')}${tf('d','Abend')}</div>${cb('streak','Streak retten')}${tf('st','Streak-Erinnerung um')}${cb('water','Trinken (15 und 19 Uhr, nur wenn du hinten liegst)')}`:''}`
+   :'<div class="small muted">Erinnerungen gibt es in der Android-App (und bald iOS-App). Im Browser geht das nicht zuverlässig.</div>'}</section>`}
 function appCard(){const nat=!!updater(); const v=APP_VERSION.startsWith('__')?'Entwicklungsversion':APP_VERSION;
   return `<section class="card stack" style="gap:10px"><h3>App und Updates</h3>
    <div class="kv"><span class="muted">Version</span><span class="num">${esc(v)}</span><span class="muted">Läuft als</span><span>${nat?'Android-App':window.claude&&window.claude.use?'Claude-Artefakt':navigator.standalone||matchMedia('(display-mode: standalone)').matches?'Home-Bildschirm-App':'Webseite'}</span></div>
@@ -1622,6 +1708,8 @@ async function checkUpdate(force){const U=updater(); if(!U||updBusy)return; if(A
     say('Lade Version '+v.version+' …'); const b=await updDownload(U,v.version,say,v.checksum); await U.next({id:b.id}); updId=b.id; updBar(); say('Version '+v.version+' ist geladen. Tipp oben auf „Jetzt aktualisieren“ oder starte die App neu.')}
   catch(e){say('Update fehlgeschlagen: '+(e&&e.message||e))}finally{updBusy=false; if(UI.tab==='mehr')render()}}
 (function(){const U=updater(); if(U){try{U.notifyAppReady()}catch(e){} setTimeout(()=>checkUpdate(true),3000); document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkUpdate(false)})}})();
+(function(){const P=LN(); if(P){try{P.addListener('localNotificationActionPerformed',a=>{const m=a&&a.notification&&a.notification.extra&&a.notification.extra.meal; UI.date=today(); if(m){UI.meal=m; UI.tab='add'; UI.focusQ=true} else UI.tab='heute'; render()})}catch(e){}}})();
+document.addEventListener('toggle',ev=>{const t=ev.target; if(t.classList&&t.classList.contains('mrow')){if(t.open)UI.openMeal=t.dataset.meal; else if(UI.openMeal===t.dataset.meal)UI.openMeal=null}},true);
 loadLocal(); UI.lastToday=today(); render(); connectCloud(); if(haOn())setTimeout(()=>haSync(false),1200); if(S.settings.hcSync)setTimeout(()=>syncHealth(false),800);
 </script>
 

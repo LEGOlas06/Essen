@@ -13,6 +13,10 @@
       "channelUrl": "",
       "resetWhenUpdate": true,
       "appReadyTimeout": 15000
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_flame",
+      "iconColor": "#FF8A3D"
     }
   }
 }
