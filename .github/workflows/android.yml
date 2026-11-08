@@ -35,11 +35,16 @@ jobs:
         run: |
           mkdir -p ~/.android
           if [ -n "$KEYSTORE_B64" ]; then echo "$KEYSTORE_B64" | base64 -d > ~/.android/debug.keystore; else cp signing/debug.keystore ~/.android/debug.keystore; echo "Nutze den Schlüssel aus signing/debug.keystore"; fi
+      - name: Gradle zwischenspeichern
+        uses: gradle/actions/setup-gradle@v4
       - name: APK bauen
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          # Gradle-Download ist manchmal langsam oder liefert 504: längeres Timeout und bis zu 4 Versuche
+          sed -i 's/^networkTimeout=.*/networkTimeout=120000/' gradle/wrapper/gradle-wrapper.properties || true
+          grep -q '^networkTimeout=' gradle/wrapper/gradle-wrapper.properties || echo 'networkTimeout=120000' >> gradle/wrapper/gradle-wrapper.properties
+          for i in 1 2 3 4; do ./gradlew assembleDebug --no-daemon && break; if [ $i = 4 ]; then exit 1; fi; echo "Versuch $i fehlgeschlagen, warte $((i*30)) s"; sleep $((i*30)); done
           cp app/build/outputs/apk/debug/app-debug.apk ../tellerflamme.apk
       - name: Als Release veröffentlichen
         uses: softprops/action-gh-release@v2
