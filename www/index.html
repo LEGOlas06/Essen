@@ -108,7 +108,7 @@ h2.sec{font-family:var(--display);font-size:22px;margin:10px 2px -2px}
 .mrow .grow{display:flex;flex-direction:column;gap:2px;min-width:0}.mname{font-size:17px}
 .plus{width:44px;height:44px;border-radius:50%;background:var(--ink);color:var(--bg);font-size:26px;line-height:1;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0;border:0;flex:none}
 .mbody{padding:0 0 8px}
-.wbig{font-family:var(--display);font-size:34px}.glasses{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}.glass{position:relative;background:none;border:0;padding:2px;min-height:0}.gplus{position:absolute;left:0;right:0;top:9px;font-weight:800;color:var(--ink);font-size:16px}
+.wbig{font-family:var(--display);font-size:34px}.glasses{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}.glass{position:relative;background:none;border:0;padding:4px 3px;min-height:0;touch-action:manipulation}.gplus{pointer-events:none}.gplus{position:absolute;left:0;right:0;top:9px;font-weight:800;color:var(--ink);font-size:16px}
 button.chip-streak{cursor:pointer;font:inherit;color:inherit}
 .micro{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px}
 .mi .l{display:flex;justify-content:space-between;font-size:12.5px;gap:6px;margin-bottom:3px}
@@ -1416,6 +1416,8 @@ function openSheet(html){document.getElementById('sheetRoot').innerHTML=`<div cl
 function closeSheet(){document.getElementById('sheetRoot').innerHTML='';UI.nr=null}
 
 /* ---------- Events ---------- */
+window.addEventListener('error',e=>{try{toast('Fehler: '+(e.message||e.error||'unbekannt'))}catch(x){}});
+window.addEventListener('unhandledrejection',e=>{try{toast('Fehler: '+((e.reason&&e.reason.message)||e.reason||'unbekannt'))}catch(x){}});
 document.addEventListener('click',async ev=>{
   const tb=ev.target.closest('[data-tab]'); if(tb){if(UI.scanning)await stopScan(); UI.tab=tb.dataset.tab; if(UI.tab==='add')UI.focusQ=false; window.scrollTo(0,0); render(); return}
   const el=ev.target.closest('[data-act]'); if(!el)return; const a=el.dataset.act;
@@ -1432,10 +1434,10 @@ document.addEventListener('click',async ev=>{
     case 'maddall':addAll();break;
     case 'updcheck':checkUpdate(true);break;
     case 'donemeal':UI.tab='heute';UI.q='';window.scrollTo(0,0);render();break;
-    case 'glass':{const b=S.body[UI.date]=S.body[UI.date]||{}; const i=+el.dataset.i, cur=b.water||0; const nv=(i+1)*250<=cur?i*250:(i+1)*250; const before=cur; b.water=nv; if(!b.water)delete b.water; if(!Object.keys(b).length)delete S.body[UI.date]; Store.saveMeta(); render(); const g=drinkGoal(UI.date); if(nv>before&&nv>=g&&before<g)toast('Trinkziel geschafft!'); try{notifResched()}catch(e){} break}
+    case 'glass':{const b=S.body[UI.date]=S.body[UI.date]||{}; const i=+el.dataset.i, cur=b.water||0; const nv=(i+1)*250<=cur?i*250:(i+1)*250; const before=cur; b.water=nv; if(!b.water)delete b.water; if(!Object.keys(b).length)delete S.body[UI.date]; try{Store.saveMeta()}catch(e){toast('Speichern: '+e.message)} render(); const g=drinkGoal(UI.date); if(nv>before&&nv>=g&&before<g)toast('Trinkziel geschafft!'); try{notifResched()}catch(e){} break}
     case 'details':UI.showDetails=!UI.showDetails; render(); break;
     case 'streak':openSheet(streakCard(streakInfo())+'<button data-act="close" style="margin-top:12px;width:100%">Schließen</button>'); break;
-    case 'water':{const b=S.body[UI.date]=S.body[UI.date]||{}; b.water=Math.max(0,(b.water||0)+(+el.dataset.ml)); if(!b.water)delete b.water; if(!Object.keys(b).length)delete S.body[UI.date]; Store.saveMeta(); render(); const g=drinkGoal(UI.date); if(+el.dataset.ml>0&&b.water>=g&&b.water-(+el.dataset.ml)<g)toast('Trinkziel geschafft!'); else if(+el.dataset.ml>0)toast('+'+el.dataset.ml+' ml getrunken'); try{notifSoon()}catch(e){} break}
+    case 'water':{const b=S.body[UI.date]=S.body[UI.date]||{}; b.water=Math.max(0,(b.water||0)+(+el.dataset.ml)); if(!b.water)delete b.water; if(!Object.keys(b).length)delete S.body[UI.date]; try{Store.saveMeta()}catch(e){toast('Speichern: '+e.message)} render(); const g=drinkGoal(UI.date); if(+el.dataset.ml>0&&b.water>=g&&b.water-(+el.dataset.ml)<g)toast('Trinkziel geschafft!'); else if(+el.dataset.ml>0)toast('+'+el.dataset.ml+' ml getrunken'); try{notifSoon()}catch(e){} break}
     case 'meal':UI.meal=el.dataset.meal;render();break;
     case 'pick':{const k=el.dataset.kind,id=el.dataset.id; if(UI.multi){toggleSel(k,id);break} if(k==='o'){const f=UI.online.find(x=>x.code===id)||UI.usda.find(x=>x.code===id); S.foods[f.id]=f; Store.saveMeta(); openAmount('f',f.id,f)} else openAmount(k,id); break}
     case 'quick':UI.amt.amt=+el.dataset.v;sheetAmount();break;
