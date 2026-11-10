@@ -14,10 +14,20 @@ vorrat_setzen:
             - da
             - wenig
             - leer
+    person:
+      required: false
+      example: Sophie
+      selector:
+        text:
 vorrat_entfernen:
   fields:
     name:
       required: true
       example: Milch
+      selector:
+        text:
+    person:
+      required: false
+      example: Sophie
       selector:
         text:

@@ -49,6 +49,10 @@
         "status": {
           "name": "Status",
           "description": "da, wenig (fast leer) oder leer"
+        },
+        "person": {
+          "name": "Person",
+          "description": "Name der Person in Home Assistant (sonst wer die Aktion ausführt, sonst die Hauptperson)"
         }
       }
     },
@@ -59,6 +63,21 @@
         "name": {
           "name": "Name",
           "description": "Name des Lebensmittels"
+        },
+        "person": {
+          "name": "Person",
+          "description": "Name der Person in Home Assistant (sonst wer die Aktion ausführt, sonst die Hauptperson)"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Personen",
+        "description": "Jede Person in Home Assistant hat in Tellerflamme eigene Daten und einen eigenen Vorrat. Welche Person das ist, erkennt Tellerflamme am Zugangs-Token in der App.\n\nHier legst du fest, wem die Daten gehören, die schon vor der Trennung in Home Assistant lagen. Diese Person behält auch die bisherigen Entitäts-IDs (z. B. todo.tellerflamme_vorrat). Am besten ändern, bevor sich die anderen Geräte neu verbinden.",
+        "data": {
+          "main": "Bisherige Daten gehören zu"
         }
       }
     }

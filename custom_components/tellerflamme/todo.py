@@ -1,42 +1,23 @@
-"""Zwei To-do-Listen: der Vorrat und eine Einkaufsliste aus allem, was leer oder fast leer ist."""
+"""Pro Person zwei To-do-Listen: der Vorrat und eine Einkaufsliste aus allem, was leer oder fast leer ist."""
 
 from __future__ import annotations
 
 from homeassistant.components.todo import TodoItem, TodoItemStatus, TodoListEntity, TodoListEntityFeature
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, SIGNAL_UPDATE, ST_DA, ST_LEER, ST_WENIG, STATUS_LABEL
+from .const import ST_DA, ST_LEER, ST_WENIG, STATUS_LABEL
+from .entity import PersonEntity, setup_per_person
 from .hub import parse_status
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEntitiesCallback) -> None:
-    add([VorratTodo(hass, entry), EinkaufTodo(hass, entry)])
+    await setup_per_person(hass, entry, add, (VorratTodo, EinkaufTodo))
 
 
-class _Base(TodoListEntity):
-    _attr_has_entity_name = True
-    _attr_should_poll = False
-
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
-        self._data = hass.data[DOMAIN]
-        self._attr_unique_id = f"{entry.entry_id}_{self._key}"
-        self._attr_translation_key = self._key
-        self.entity_id = f"todo.tellerflamme_{self._key}"
-        self._attr_device_info = {"identifiers": {(DOMAIN, entry.entry_id)}, "name": "Tellerflamme", "manufacturer": "Tellerflamme"}
-
-    async def async_added_to_hass(self) -> None:
-        self.async_on_remove(async_dispatcher_connect(self.hass, SIGNAL_UPDATE, self._refresh))
-
-    @callback
-    def _refresh(self) -> None:
-        self.async_write_ha_state()
-
-    @property
-    def hub(self):
-        return self._data.hub
+class _Base(PersonEntity, TodoListEntity):
+    _platform = "todo"
 
     @staticmethod
     def _desc_to_status(item: TodoItem) -> str:

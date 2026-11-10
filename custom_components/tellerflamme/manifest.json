@@ -1,14 +1,18 @@
 {
   "domain": "tellerflamme",
   "name": "Tellerflamme",
-  "codeowners": ["@LEGOlas06"],
+  "codeowners": [
+    "@LEGOlas06"
+  ],
   "config_flow": true,
-  "dependencies": ["http"],
+  "dependencies": [
+    "http"
+  ],
   "documentation": "https://github.com/legolas06/essen/blob/main/homeassistant/README.md",
   "integration_type": "service",
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/legolas06/essen/issues",
   "requirements": [],
   "single_config_entry": true,
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

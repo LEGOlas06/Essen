@@ -11,6 +11,15 @@ Die Erweiterung `custom_components/tellerflamme` macht Home Assistant zur gemein
   - `sensor.tellerflamme_kalorien_heute`, `sensor.tellerflamme_streak`, `sensor.tellerflamme_vorrat_anzahl`
 - **Aktionen:** `tellerflamme.vorrat_setzen` (name, status: da / wenig / leer) und `tellerflamme.vorrat_entfernen` (name).
 
+## Mehrere Personen
+
+Jede Person in Home Assistant hat eigene Daten: Tagebuch, Vorrat, Einkaufsliste, Rezepte, Ziele und Sensoren. Welche Person es ist, erkennt die Erweiterung am Zugangs-Token, das in der App eingetragen ist. Also: Jede Person erstellt den Token in **ihrem eigenen** Home-Assistant-Profil. In der App steht unter *Ziele → Home Assistant*, als wer sie verbunden ist.
+
+- Pro Person gibt es ein Gerät „Tellerflamme <Name>“ mit eigenen Entitäten, z. B. `todo.tellerflamme_vorrat_sophie` und `sensor.tellerflamme_kalorien_heute_sophie`.
+- Die Hauptperson behält die IDs ohne Namen (`todo.tellerflamme_vorrat` usw.), damit bestehende Dashboards und Automationen weiterlaufen.
+- Daten aus der Zeit vor Version 1.1 gehören der Hauptperson. Das ist anfangs der Besitzer von Home Assistant. Ändern unter *Einstellungen → Geräte & Dienste → Tellerflamme → Konfigurieren*, am besten bevor sich die anderen Geräte neu verbinden.
+- Bei `tellerflamme.vorrat_setzen` und `tellerflamme.vorrat_entfernen` kann man mit `person: Sophie` angeben, wessen Vorrat gemeint ist. Ohne Angabe: wer die Aktion ausführt, sonst die Hauptperson.
+
 Die Daten liegen in `.storage/tellerflamme` und sind damit in jedem Home-Assistant-Backup enthalten.
 
 ## Installieren

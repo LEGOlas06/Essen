@@ -49,6 +49,10 @@
         "status": {
           "name": "Status",
           "description": "da, wenig or leer"
+        },
+        "person": {
+          "name": "Person",
+          "description": "Name of the Home Assistant person (default: whoever runs the action, otherwise the main person)"
         }
       }
     },
@@ -59,6 +63,21 @@
         "name": {
           "name": "Name",
           "description": "Food name"
+        },
+        "person": {
+          "name": "Person",
+          "description": "Name of the Home Assistant person (default: whoever runs the action, otherwise the main person)"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "People",
+        "description": "Every person in Home Assistant has their own Tellerflamme data and pantry, identified by the access token used in the app.\n\nChoose who owns the data that existed before the split. This person also keeps the previous entity IDs (e.g. todo.tellerflamme_vorrat). Best changed before other devices reconnect.",
+        "data": {
+          "main": "Existing data belongs to"
         }
       }
     }

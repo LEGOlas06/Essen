@@ -30,6 +30,10 @@ class TellerHub:
         self.epoch: str = data.get("epoch") or uuid.uuid4().hex[:12]
         self.status: dict[str, Any] = data.get("status", {})
 
+    def new_epoch(self) -> None:
+        """Zwingt alle Geräte beim nächsten Abgleich zu einem vollständigen Neuabgleich."""
+        self.epoch = uuid.uuid4().hex[:12]
+
     def as_dict(self) -> dict[str, Any]:
         return {"records": self.records, "seq": self.seq, "epoch": self.epoch, "status": self.status}
 

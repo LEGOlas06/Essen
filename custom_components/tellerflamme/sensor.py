@@ -1,4 +1,4 @@
-"""Sensoren: Vorrat, Rezeptvorschlag, Kalorien, Streak und Vitaminlücken (die App liefert die Werte)."""
+"""Sensoren pro Person: Vorrat, Rezeptvorschlag, Kalorien, Streak und Vitaminlücken (die App liefert die Werte)."""
 
 from __future__ import annotations
 
@@ -6,39 +6,23 @@ from typing import Any
 
 from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, SIGNAL_UPDATE, ST_DA, ST_LEER, ST_WENIG
+from .const import ST_DA, ST_LEER, ST_WENIG
+from .entity import PersonEntity, setup_per_person
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEntitiesCallback) -> None:
-    add([cls(hass, entry) for cls in (VorratSensor, VorschlagSensor, KalorienSensor, StreakSensor, LueckenSensor)])
+    await setup_per_person(hass, entry, add, (VorratSensor, VorschlagSensor, KalorienSensor, StreakSensor, LueckenSensor))
 
 
-class _Base(SensorEntity):
-    _attr_has_entity_name = True
-    _attr_should_poll = False
-    _key = ""
-
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
-        self._data = hass.data[DOMAIN]
-        self._attr_unique_id = f"{entry.entry_id}_{self._key}"
-        self._attr_translation_key = self._key
-        self.entity_id = f"sensor.tellerflamme_{self._key}"
-        self._attr_device_info = {"identifiers": {(DOMAIN, entry.entry_id)}, "name": "Tellerflamme", "manufacturer": "Tellerflamme"}
-
-    async def async_added_to_hass(self) -> None:
-        self.async_on_remove(async_dispatcher_connect(self.hass, SIGNAL_UPDATE, self._refresh))
-
-    @callback
-    def _refresh(self) -> None:
-        self.async_write_ha_state()
+class _Base(PersonEntity, SensorEntity):
+    _platform = "sensor"
 
     @property
     def status(self) -> dict[str, Any]:
-        return self._data.hub.status or {}
+        return self.hub.status or {}
 
     @property
     def _stamp(self) -> dict[str, Any]:
@@ -54,11 +38,11 @@ class VorratSensor(_Base):
 
     @property
     def native_value(self) -> int:
-        return sum(1 for i in self._data.hub.vorrat() if i["st"] != ST_LEER)
+        return sum(1 for i in self.hub.vorrat() if i["st"] != ST_LEER)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        items = self._data.hub.vorrat()
+        items = self.hub.vorrat()
         return {
             "da": [i["name"] for i in items if i["st"] == ST_DA],
             "fast_leer": [i["name"] for i in items if i["st"] == ST_WENIG],

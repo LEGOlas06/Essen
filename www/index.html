@@ -1738,7 +1738,7 @@ async function haSync(manual){if(!haOn()){if(manual)toast('Erst Adresse und Toke
     const ns=res.reset?{}:{...sent}; if(!res.reset)ch.forEach(c=>{if(c.del)delete ns[c.k]; else ns[c.k]=hs[c.k]});
     const recs=res.records; res.records.forEach(r=>{if(r.del)delete ns[r.k]; else ns[r.k]=haHash(r.v)});
     if(recs.length){HA.applying=true; try{haApply(recs); Store.saveLocal()}finally{HA.applying=false}}
-    const wasReset=res.reset&&!first; HA.st={...HA.st,sent:ns,cursor:res.cursor,epoch:res.epoch,last:Date.now(),err:''}; haSaveSt();
+    const wasReset=res.reset&&!first; HA.st={...HA.st,sent:ns,cursor:res.cursor,epoch:res.epoch,last:Date.now(),err:'',person:res.person||''}; haSaveSt();
     if(wasReset)HA.again=true;
     const changed=recs.some(r=>!(r.k in R)||hs[r.k]!==haHash(r.v)||r.del);
     if(manual)toast(changed?'Abgeglichen: '+recs.length+' Änderungen geholt':'Abgeglichen');
@@ -1755,7 +1755,7 @@ function haCard(){const g=S.settings, art=!!(window.claude&&window.claude.use);
    <div class="field"><label for="ha-token">Zugangs-Token (langlebig)</label><input id="ha-token" type="password" autocomplete="off" placeholder="In Home Assistant: Profil → Sicherheit → Token erstellen" value="${esc(g.haToken||'')}"></div>
    <label class="row small"><input type="checkbox" id="ha-on" style="width:auto" ${g.haOn?'checked':''}> Automatisch abgleichen (beim Öffnen, nach Änderungen und jede Minute)</label>
    <div class="row wrapr"><button class="primary sm" data-act="hasave">Speichern und testen</button>${haOn()?`<button class="sm" data-act="hasync" ${HA.busy?'disabled':''}>Jetzt abgleichen</button>`:''}</div>
-   ${HA.st.err&&g.haOn?`<div class="note" role="status">${esc(HA.st.err)}</div>`:HA.st.last&&g.haOn?`<div class="tiny muted" role="status">Zuletzt abgeglichen: ${new Date(HA.st.last).toLocaleString('de-DE')} · Gerät ${esc(haDev())}</div>`:''}
+   ${HA.st.err&&g.haOn?`<div class="note" role="status">${esc(HA.st.err)}</div>`:HA.st.last&&g.haOn?`<div class="tiny muted" role="status">Zuletzt abgeglichen: ${new Date(HA.st.last).toLocaleString('de-DE')} · Gerät ${esc(haDev())}${HA.st.person?' · verbunden als <b>'+esc(HA.st.person)+'</b>':''}</div>`:''}
    <details><summary class="small">So richtest du es ein</summary><ol class="small" style="margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:4px">
     <li>Die Erweiterung „Tellerflamme“ in Home Assistant installieren (über HACS als benutzerdefiniertes Repository <b>github.com/legolas06/essen</b>, oder den Ordner custom_components/tellerflamme kopieren) und Home Assistant neu starten.</li>
     <li>Einstellungen → Geräte &amp; Dienste → Integration hinzufügen → „Tellerflamme“.</li>

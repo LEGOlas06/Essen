@@ -4,6 +4,7 @@ DOMAIN = "tellerflamme"
 STORAGE_KEY = "tellerflamme"
 STORAGE_VERSION = 1
 SIGNAL_UPDATE = "tellerflamme_update"
+SIGNAL_NEW_USER = "tellerflamme_new_user"
 
 # Vorrat-Status, so wie die App sie speichert
 ST_DA = "da"
