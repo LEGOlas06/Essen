@@ -1319,7 +1319,7 @@ function vStats(si){
   ${topL.length?`<section class="card"><h3>Größte Kalorienquellen</h3><div class="kv" style="margin-top:8px">${topL.map(([n,k])=>`<span>${esc(n)}</span><span>${Math.round(k)} kcal</span>`).join('')}</div></section>`:''}
   <section class="card stack" style="gap:10px"><h3>Daten auslesen</h3>
    <div class="small muted">Für Excel, Google Sheets oder als Backup. Die CSV-Dateien nutzen Semikolon und Komma, damit Excel sie direkt richtig öffnet.</div>
-   <div class="grid2"><button data-act="csv-entries">Einträge (CSV)</button><button data-act="csv-days">Tagessummen (CSV)</button><button data-act="json">Backup (JSON)</button><button data-act="import">Backup laden</button></div>
+   <div class="grid2"><button data-act="csv-entries">Einträge (CSV)</button><button data-act="csv-days">Tagessummen (CSV)</button><button data-act="json">Backup (JSON)</button><button data-act="import">Backup laden</button><button data-act="importtext">Backup als Text einfügen</button></div>
    <button data-act="copysum">Zusammenfassung für Claude kopieren</button>
    <div class="tiny muted">Die Zusammenfassung kannst du in den Chat einfügen, dann wertet Claude deine Ernährung aus.</div></section>
   </div>`;
@@ -1373,6 +1373,10 @@ function csvEntries(){const head=['Datum','Uhrzeit','Mahlzeit','Lebensmittel','M
   Object.keys(S.days).sort().forEach(d=>S.days[d].forEach(e=>rows.push([d,entryTime(e,d)||'',MEALS.find(m=>m[0]===e.meal)?.[1]||'',csvCell(e.name),dec(e.amt),e.unit,...NK.map((k,i)=>dec(e.n[i]))].join(';'))));return rows.join('\r\n')}
 function csvDays(){const head=['Datum','Einträge',...NK.map(k=>NI[k][0]+' ('+NI[k][1]+')'),'kcal-Ziel','Aktivkalorien','Schritte','Gewicht (kg)','Getrunken (ml)'];const rows=[head.join(';')];
   Object.keys(S.days).sort().forEach(d=>{if(!S.days[d].length)return; rows.push([d,S.days[d].length,...dayTotals(d).map(dec),dayGoal(d),S.body[d]&&S.body[d].burn!=null?S.body[d].burn:'',S.body[d]&&S.body[d].steps!=null?S.body[d].steps:'',S.body[d]&&S.body[d].w?dec(S.body[d].w):'',S.body[d]&&S.body[d].water?S.body[d].water:''].join(';'))});return rows.join('\r\n')}
+/* Notlösung, wenn die App-Version noch kein Speichern/Teilen kann: Inhalt zum Kopieren anzeigen */
+let copyBuf='';
+function copyFallback(name,text,why){copyBuf=text; openSheet(`<div class="stack"><h2>${esc(name)}</h2><div class="small muted">${esc(why)} Tippe auf „Alles kopieren“ und füge den Text zum Beispiel in eine Notiz, eine Mail an dich selbst oder in den Claude-Chat ein.</div><button class="primary" data-act="copybuf">Alles kopieren</button><textarea readonly style="width:100%;height:160px;font-size:11px">${esc(text.length>20000?text.slice(0,20000)+'\n… (gekürzt, „Alles kopieren“ nimmt alles)':text)}</textarea><button data-act="close">Schließen</button></div>`)}
+async function copyBufNow(){try{await navigator.clipboard.writeText(copyBuf); toast('Kopiert ('+Math.round(copyBuf.length/1024)+' kB)')}catch(e){try{const t=document.createElement('textarea'); t.value=copyBuf; document.body.appendChild(t); t.select(); const ok=document.execCommand('copy'); t.remove(); toast(ok?'Kopiert':'Kopieren nicht möglich. Bitte Text markieren und kopieren.')}catch(e2){toast('Kopieren nicht möglich. Bitte Text markieren und kopieren.')}}}
 async function saveFile(name,text,mime){
   if(Store.dl){try{await Store.dl.save({filename:name,data:new Blob([text],{type:mime})});toast('Gespeichert: '+name)}catch(e){if(e&&e.code!=='declined')toast('Download nicht möglich: '+(e.message||e.code))}return}
   /* Android/iOS-App: Downloads gehen in der WebView nicht. Datei speichern und über „Teilen“ anbieten (Drive, Dateien, Mail, WhatsApp …) */
@@ -1380,7 +1384,8 @@ async function saveFile(name,text,mime){
   if(P&&P.Filesystem){try{const w=await P.Filesystem.writeFile({path:name,data:text,directory:'CACHE',encoding:'utf8'});
       if(P.Share){try{await P.Share.share({title:name,files:[w.uri],dialogTitle:'Datei speichern oder senden'});return}catch(e){if(/cancel/i.test(String(e&&e.message)))return}}
       const d=await P.Filesystem.writeFile({path:name,data:text,directory:'DOCUMENTS',encoding:'utf8'}); toast('Gespeichert unter Dokumente: '+name); return}
-    catch(e){toast('Speichern nicht möglich: '+(e&&e.message||e)); return}}
+    catch(e){copyFallback(name,text,'Speichern hat nicht geklappt ('+(e&&e.message||e)+').'); return}}
+  if(P){copyFallback(name,text,'Diese installierte App-Version kann noch keine Dateien speichern. Dafür einmal die neue APK installieren.'); return}
   try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:mime}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}catch(e){toast('Download nicht möglich')}
 }
 function summaryText(){
@@ -1394,7 +1399,7 @@ function summaryText(){
 }
 async function copySummary(){const t=summaryText(); try{await navigator.clipboard.writeText(t);toast('Kopiert. Jetzt im Chat einfügen.')}catch(e){openSheet(`<div class="stack"><h2>Zusammenfassung</h2><div class="small muted">Kopieren klappt hier nicht automatisch. Markiere den Text und kopiere ihn.</div><textarea rows="12" id="sumtxt" readonly>${esc(t)}</textarea><button data-act="close">Schließen</button></div>`);setTimeout(()=>document.getElementById('sumtxt')?.select(),50)}}
 async function importJSON(file){
-  try{const o=JSON.parse(await file.text()); if(!o||!o.days)throw 0;
+  try{const o=JSON.parse(typeof file==='string'?file:await file.text()); if(!o||!o.days)throw 0;
     Object.assign(S.foods,o.foods||{}); Object.assign(S.recipes,o.recipes||{}); S.vorrat=Object.assign(S.vorrat||{},o.vorrat||{}); if(o.body)S.body=Object.assign(S.body||{},o.body); if(o.settings)S.settings={...S.settings,...o.settings};
     let n=0; for(const d of Object.keys(o.days)){if(Array.isArray(o.days[d])){S.days[d]=o.days[d];n++}}
     await Store.saveAll(); toast(`Backup geladen: ${n} Tage`); render();
@@ -1590,8 +1595,11 @@ document.addEventListener('click',async ev=>{
     case 'csv-entries':saveFile('tellerflamme-eintraege-'+today()+'.csv','﻿'+csvEntries(),'text/csv');break;
     case 'csv-days':saveFile('tellerflamme-tage-'+today()+'.csv','﻿'+csvDays(),'text/csv');break;
     case 'json':saveFile('tellerflamme-backup-'+today()+'.json',JSON.stringify({app:'tellerflamme',version:1,exported:new Date().toISOString(),...S},null,1),'application/json');break;
+    case 'importtext':openSheet(`<div class="stack"><h2>Backup als Text einfügen</h2><div class="small muted">Füge hier den kopierten Backup-Text (JSON) ein.</div><textarea id="importTxt" style="width:100%;height:180px;font-size:11px" placeholder='{"app":"tellerflamme", …'></textarea><button class="primary" data-act="importtext-go">Backup laden</button><button data-act="close">Abbrechen</button></div>`);break;
+    case 'importtext-go':{const v=(document.getElementById('importTxt')||{}).value||''; if(!v.trim()){toast('Bitte zuerst den Text einfügen.');break} closeSheet(); importJSON(v.trim());break}
     case 'import':document.getElementById('importFile').click();break;
     case 'copysum':copySummary();break;
+    case 'copybuf':copyBufNow();break;
     case 'savegoals':['kcal','prot','carb','fat','fib','waterGoal'].forEach(k=>{const v=parseInt(document.getElementById('g-'+k).value);if(v>0)S.settings[k]=v}); S.settings.sex=document.getElementById('g-sex').value; Store.saveMeta(); toast('Ziele gespeichert'); render();break;
     case 'calc':{const p=readProfile(); Object.assign(S.settings,{age:p.age,height:p.height,weight:p.weight,sex:p.sex,useBurn:p.useBurn,pal:p.pal,goal:p.goal,rate:p.rate,strength:p.strength}); Store.saveMeta(); const c=calcGoals(p); UI.calc=c||{err:'Bitte Alter, Größe und Gewicht eintragen.'}; render(); break}
     case 'applycalc':{const c=UI.calc; if(!c||c.err)break; Object.assign(S.settings,{kcal:c.kcal,prot:c.prot,carb:c.carb,fat:c.fat,fib:c.fib}); if(+S.settings.weight>0)S.settings.waterGoal=Math.round(+S.settings.weight*35/250)*250; Store.saveMeta(); UI.calc=null; render(); toast('Tagesziele übernommen'); break}
