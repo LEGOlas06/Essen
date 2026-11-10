@@ -1612,7 +1612,8 @@ document.addEventListener('click',async ev=>{
     case 'health':document.getElementById('healthFile').click();break;
     case 'reset':UI.confirmReset=true;render();break;
     case 'reset-no':UI.confirmReset=false;render();break;
-    case 'reset-yes':{const old=Object.keys(S.days); S={settings:{...S.settings},foods:{},recipes:{},days:{},body:{},vorrat:{}}; UI.confirmReset=false;
+    case 'reset-yes':{const old=Object.keys(S.days); S={settings:{...S.settings,haOn:false},foods:{},recipes:{},days:{},body:{},vorrat:{}}; UI.confirmReset=false;
+      /* Home-Assistant-Abgleich trennen, damit das Löschen auf diesem Gerät nicht die Daten in Home Assistant löscht */ HA.st={dev:HA.st.dev,sent:{},cursor:0}; haSaveSt();
       if(Store.mode==='db'){try{for(const d of old)await Store.db.collection(Store.base).doc('day-'+d).delete()}catch(e){}} await Store.saveMeta(); render(); toast('Alle Daten gelöscht'); break}
   }
 });
