@@ -722,7 +722,7 @@ function vHeute(si){
 /* ---------- Eintragen ---------- */
 /* ---------- Suche: Tippfehler, Schreibvarianten, Synonyme ---------- */
 function phon(s){return norm(s).replace(/ae/g,'a').replace(/oe/g,'o').replace(/ue/g,'u').replace(/ck/g,'k').replace(/tz/g,'z').replace(/ph/g,'f').replace(/th/g,'t').replace(/dt/g,'t').replace(/v/g,'f').replace(/y/g,'i').replace(/ie/g,'i').replace(/c(?=[aou])/g,'k').replace(/([a-z])\1+/g,'$1').replace(/[^a-z0-9 ]+/g,' ')}
-const SYN_GROUPS=['karotte möhre mohrrübe rüebli gelbe rübe','kartoffel erdapfel grumbeere','tomate paradeiser','quark topfen','sahne rahm obers schlagsahne','brötchen semmel schrippe weckle wecken','hackfleisch faschiertes gehacktes hack','aprikose marille','pflaume zwetschge zwetschke','blumenkohl karfiol','rotkohl blaukraut rotkraut','weißkohl weißkraut kraut','pfannkuchen palatschinke eierkuchen crêpe','schoko schokolade','joghurt jogurt yoghurt','hähnchen hühnchen huhn poulet hendl geflügel chicken','pute truthahn','nudeln pasta teigwaren','mineralwasser sprudel','pommes pommes frites fritten','frikadelle bulette fleischpflanzerl fleischküchle','keks kekse plätzchen biskuit','mais kukuruz','lauch porree','feldsalat rapunzel nüsslisalat','champignon champignons pilz pilze','haferflocken porridge haferbrei oatmeal','johannisbeere ribisel','meerrettich kren','aubergine melanzani','zucchini zucchetti','paprika peperoni','brezel breze brezn','krapfen berliner pfannkuchen','orangensaft o-saft','limonade limo','erdnussbutter erdnussmus','sahnejoghurt rahmjoghurt','kürbis kürbisse','tofu sojaquark','kichererbse kichererbsen','linse linsen','bohne bohnen','spiegelei spiegeleier ei eier','apfel äpfel','birne birnen','nuss nüsse','wurst würstchen','schinken speck','burger hamburger','pizza','müsli muesli granola','cornflakes frühstücksflocken','margarine pflanzenfett','butterbrot brot','vollkornbrot schwarzbrot','toast toastbrot','schmarrn schmarren','würstel würstchen wienerle','rosenkohl kohlsprossen','pfifferling eierschwammerl','pflaumenmus powidl','kopfsalat häuptelsalat','leberkäse leberkäs fleischkäse','grüne bohnen fisolen','hähnchenbrust hühnerbrust','nockerl spätzle'];
+const SYN_GROUPS=['karotte möhre mohrrübe rüebli gelbe rübe','kartoffel erdapfel grumbeere','tomate paradeiser','quark topfen','sahne rahm obers schlagsahne','brötchen semmel schrippe weckle wecken weckerl','hackfleisch faschiertes gehacktes hack','aprikose marille','pflaume zwetschge zwetschke','blumenkohl karfiol','rotkohl blaukraut rotkraut','weißkohl weißkraut kraut','pfannkuchen palatschinke eierkuchen crêpe','schoko schokolade','joghurt jogurt yoghurt','hähnchen hühnchen huhn poulet hendl geflügel chicken','pute truthahn','nudeln pasta teigwaren','mineralwasser sprudel','pommes pommes frites fritten','frikadelle bulette fleischpflanzerl fleischküchle','keks kekse plätzchen biskuit','mais kukuruz','lauch porree','feldsalat rapunzel nüsslisalat','champignon champignons pilz pilze','haferflocken porridge haferbrei oatmeal','johannisbeere ribisel','meerrettich kren','aubergine melanzani','zucchini zucchetti','paprika peperoni','brezel breze brezn','krapfen berliner pfannkuchen','orangensaft o-saft','limonade limo','erdnussbutter erdnussmus','sahnejoghurt rahmjoghurt','kürbis kürbisse','tofu sojaquark','kichererbse kichererbsen','linse linsen','bohne bohnen','spiegelei spiegeleier ei eier','apfel äpfel','birne birnen','nuss nüsse','wurst würstchen','schinken speck','burger hamburger','pizza','müsli muesli granola','cornflakes frühstücksflocken','margarine pflanzenfett','butterbrot brot','vollkornbrot schwarzbrot','toast toastbrot','stangerl stangl stange','kipferl kipfel kipferln','golatsche kolatsche','krapfen berliner','schmarrn schmarren','würstel würstchen wienerle','rosenkohl kohlsprossen','pfifferling eierschwammerl','pflaumenmus powidl','kopfsalat häuptelsalat','leberkäse leberkäs fleischkäse','grüne bohnen fisolen','hähnchenbrust hühnerbrust','nockerl spätzle'];
 const SYN={}; SYN_GROUPS.forEach(g=>{const ws=g.split(' ').map(phon); ws.forEach(w=>{SYN[w]=[...new Set([...(SYN[w]||[]),...ws])]})});
 function lev(a,b,max){if(Math.abs(a.length-b.length)>max)return max+1; let pp=null, prev=Array.from({length:b.length+1},(_,i)=>i);
   for(let i=1;i<=a.length;i++){const cur=[i]; let mn=i; for(let j=1;j<=b.length;j++){cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1)); if(pp&&i>1&&j>1&&a[i-1]===b[j-2]&&a[i-2]===b[j-1])cur[j]=Math.min(cur[j],pp[j-2]+1); if(cur[j]<mn)mn=cur[j]} if(mn>max)return max+1; pp=prev; prev=cur} return prev[b.length]}
@@ -812,6 +812,53 @@ const DISH=[
  ['Proteinshake mit Milch','proteinshake shake',[['milch',300],['skyr',100],['banane',100]]],
  ['Kakao','kakao trinkschokolade heiße schokolade',[['milch',250],['blsS740000',20]]],
  ['Bowl mit Hühnchen','bowl poke buddha bowl',[['reis',150],['blsY562032',120],['avocado',50],['gurke',60],['karotte',50],['sojasauce',10]]],
+ /* Österreichisches Gebäck, je Stück (typische Bäckerei-Größen) */
+ ['Käsestangerl','käsestangerl käsestange käsestangl kässtangerl',[['broetchen',75],['gouda',22],['butter',3]],'Stück'],
+ ['Käsespeckstangerl','käsespeckstangerl käse speck stangerl speckkäsestangerl',[['broetchen',75],['gouda',18],['blsW411300',15]],'Stück'],
+ ['Speckstangerl','speckstangerl speckstange speckweckerl',[['broetchen',75],['blsW411300',18],['butter',2]],'Stück'],
+ ['Schinken-Käse-Stangerl','schinkenkäsestangerl schinken käse stangerl',[['broetchen',75],['gouda',18],['blsW424000',20]],'Stück'],
+ ['Pizzastangerl','pizzastangerl pizzastange pizzaweckerl pizzaschnitte',[['broetchen',80],['gouda',20],['passata',15],['blsW140000',10]],'Stück'],
+ ['Salzstangerl','salzstangerl salzstange kümmelstangerl kümmelweckerl',[['broetchen',70],['butter',2]],'Stück'],
+ ['Kaisersemmel','kaisersemmel handsemmel semmel',[['broetchen',60]],'Stück'],
+ ['Wachauer Laberl','wachauer laberl wachauerlaberl',[['blsB521000',35],['broetchen',35]],'Stück'],
+ ['Mohnflesserl','mohnflesserl mohnweckerl mohnstangerl mohnsemmel',[['blsB516400',65]],'Stück'],
+ ['Kornspitz','kornspitz kornstangerl',[['blsB591000',80]],'Stück'],
+ ['Mehrkornweckerl','mehrkornweckerl körnerweckerl vollkornweckerl',[['blsB591000',70]],'Stück'],
+ ['Kürbiskernweckerl','kürbiskernweckerl kürbiskernsemmel kürbiskernstangerl',[['blsB591000',65],['kuerbiskerne',8]],'Stück'],
+ ['Sonnenblumenweckerl','sonnenblumenweckerl sonnenblumenkernweckerl',[['blsB591000',65],['ch281',8]],'Stück'],
+ ['Roggenweckerl','roggenweckerl schusterlaberl',[['blsB521000',70]],'Stück'],
+ ['Laugenstangerl','laugenstangerl laugenstange',[['brezel',80]],'Stück'],
+ ['Käselaugenstangerl','käselaugenstangerl laugenkäsestangerl käse laugenstange',[['brezel',80],['gouda',20]],'Stück'],
+ ['Laugenweckerl','laugenweckerl laugensemmel',[['brezel',70]],'Stück'],
+ ['Zuckerkipferl','zuckerkipferl hagelzuckerkipferl',[['blsD7A5400',65],['zucker',6]],'Stück'],
+ ['Briochekipferl','briochekipferl milchkipferl kipferl',[['blsD7A5400',70]],'Stück'],
+ ['Butterkipferl','butterkipferl',[['blsD771600',60]],'Stück'],
+ ['Nusskipferl','nusskipferl nussbeugel nussbeugerl',[['blsD740500',90]],'Stück'],
+ ['Schokocroissant','schokocroissant schokoladencroissant nougatcroissant',[['blsD771700',80]],'Stück'],
+ ['Briochestriezel (Scheibe)','striezel briochestriezel allerheiligenstriezel brioche',[['blsD7A5400',60]],'Stück'],
+ ['Milchweckerl mit Rosinen','rosinenweckerl milchweckerl rosinensemmel',[['blsD7A5500',70]],'Stück'],
+ ['Topfengolatsche','topfengolatsche topfenkolatsche',[['blsD7A7100',70],['quark',35],['zucker',6],['rosinen',4]],'Stück'],
+ ['Marillengolatsche','marillengolatsche marmeladegolatsche marmeladengolatsche marmeladetascherl',[['blsD7A7100',75],['blsS132000',25]],'Stück'],
+ ['Powidlgolatsche','powidlgolatsche powidltascherl powidlkolatsche',[['blsD7A7100',75],['blsS161000',25]],'Stück'],
+ ['Topfentascherl','topfentascherl topfentasche',[['blsD471700',100]],'Stück'],
+ ['Apfeltascherl','apfeltascherl apfeltasche',[['blsD7A7800',100]],'Stück'],
+ ['Nussschnecke','nussschnecke',[['ch915',110]],'Stück'],
+ ['Zimtschnecke','zimtschnecke',[['blsD7A5300',100]],'Stück'],
+ ['Mohnschnecke','mohnschnecke mohnplunder',[['blsD7A7300',100]],'Stück'],
+ ['Nussstrudel (Scheibe)','nussstrudel nusspotize potize',[['blsD7A5400',50],['blsR9A3200',40]],'Stück'],
+ ['Mohnstrudel (Scheibe)','mohnstrudel mohnpotize',[['blsD463500',90]],'Stück'],
+ ['Topfenstrudel','topfenstrudel',[['blsD540400',150]],'Stück'],
+ ['Krapfen mit Marillenmarmelade','krapfen faschingskrapfen marillenkrapfen',[['blsD7A6200',70]],'Stück'],
+ ['Vanillekrapfen','vanillekrapfen',[['blsD7A6500',75]],'Stück'],
+ ['Buchteln mit Vanillesauce','buchteln wuchteln',[['blsD741400',120],['blsX361163',80]],'Stück'],
+ ['Cremeschnitte','cremeschnitte',[['ch924',120]],'Stück'],
+ ['Schaumrolle','schaumrolle',[['ch928',30],['blsD610200',20]],'Stück'],
+ ['Punschkrapfen','punschkrapfen punschkrapferl',[['blsD077002',45],['blsS132000',10],['blsS351000',20]],'Stück'],
+ ['Linzer Auge','linzer auge linzerauge spitzbub',[['ch14044',40],['blsS132000',10],['blsS111100',2]],'Stück'],
+ ['Marmorgugelhupf','marmorgugelhupf marmorkuchen gugelhupf',[['blsD431100',80]],'Stück'],
+ ['Sachertorte','sachertorte',[['blsD300200',100]],'Stück'],
+ ['Topfentorte','topfentorte käsekuchen',[['blsD4A3000',130]],'Stück'],
+ ['Linzer Torte','linzer torte linzertorte',[['blsD300500',80]],'Stück'],
 ];
 function dishSlug(s){return phon(s).replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40)}
 function ingKcal(ing){return ing.reduce((s,[fid,g])=>{const f=getFood(fid); return s+(f?f.per[0]*g/100:0)},0)}
@@ -835,12 +882,12 @@ function splitCompound(q){const w=phon(q).trim(); if(w.length<7||/\s/.test(w))re
     const sc=l[0]+r[0]; if(!best||sc<best[0])best=[sc,l[1],r[1]]}
   return best&&best[0]<4?[best[1],best[2]]:null}
 /* Gericht, zerlegtes Wort oder KI-Ergebnis als Rezept speichern, damit es wie jedes Rezept eingetragen wird */
-function saveDish(name,ing,src){const id='dish-'+dishSlug(name); const r={id,name,src:src||'dish',yield:1,unit:'Portion',ing:ing.map(([f,g])=>[f,Math.round(g)])}; S.recipes[id]=r; Store.saveMeta(); return id}
+function saveDish(name,ing,src,unit){const id='dish-'+dishSlug(name); const r={id,name,src:src||'dish',yield:1,unit:unit||'Portion',ing:ing.map(([f,g])=>[f,Math.round(g)])}; S.recipes[id]=r; Store.saveMeta(); return id}
 function materialize(kind,id){
-  if(kind==='d'){const x=DISH[+id.slice(1)]; return saveDish(x[0],x[2])}
+  if(kind==='d'){const x=DISH[+id.slice(1)]; return saveDish(x[0],x[2],'dish',x[3])}
   if(kind==='c'){const [l,r]=id.slice(2).split('|'); const fl=getFood(l), fr=getFood(r); return saveDish(UI.q.trim().replace(/^./,c=>c.toUpperCase())||(fl.name+' mit '+fr.name),[[r,typGrams(r)],[l,Math.min(40,typGrams(l))]])}
   return id}
-function dishResults(ws,fuzzy){const out=[]; DISH.forEach((x,i)=>{const k=matchRank(x[0],ws,fuzzy,x[1]); if(k>=0)out.push({kind:'d',id:'d'+i,name:x[0],tag:['Gericht · in Zutaten zerlegt','own'],kcal:ingKcal(x[2]),unit:'1 Portion',r:k})}); return out}
+function dishResults(ws,fuzzy){const out=[]; DISH.forEach((x,i)=>{const k=matchRank(x[0],ws,fuzzy,x[1]); if(k>=0)out.push({kind:'d',id:'d'+i,name:x[0],tag:[x[3]?'Gebäck · aus Zutaten berechnet':'Gericht · in Zutaten zerlegt','own'],kcal:ingKcal(x[2]),unit:'1 '+(x[3]||'Portion'),r:k})}); return out}
 function compoundResult(q){const sp=splitCompound(q); if(!sp)return null; const [l,r]=sp; const fl=getFood(l), fr=getFood(r);
   return {kind:'c',id:'c:'+l+'|'+r,name:`${q.trim().replace(/^./,c=>c.toUpperCase())}: ${fr.name} + ${fl.name}`,tag:['Aus zwei Teilen zusammengesetzt','own'],kcal:ingKcal([[l,Math.min(40,typGrams(l))],[r,typGrams(r)]]),unit:'1 Portion',r:0.5}}
 /* Im Claude-Artefakt: unbekanntes Gericht von Claude in Zutaten zerlegen lassen */
@@ -865,7 +912,7 @@ function searchLocal(q){
     const bl=[]; BLS.forEach(x=>{const k=matchRank(x[1],ws,fuzzy); if(k>=0)bl.push({kind:'f',id:'bls'+x[0],name:x[1],tag:['BLS',''],kcal:x[2][0],unit:'100 g',r:k})}); add(bl,40);
     return out.sort((a,b)=>Math.floor(a.r)-Math.floor(b.r)||a.r-b.r||a.src-b.src||a.name.length-b.name.length)};
   let out=run(false);
-  if(!out.some(x=>x.kind==='d'||x.kind==='r')&&out.filter(x=>x.kind==='f').length<2){try{const c=compoundResult(q); if(c)out.unshift(c)}catch(e){}}
+  if(!out.some(x=>x.kind==='d'||x.kind==='r'||x.kind==='f')){try{const c=compoundResult(q); if(c)out.unshift(c)}catch(e){}}
   if(out.length<8&&ws.some(a=>a[0].length>=4)){const seen=new Set(out.map(x=>x.kind+x.id)); run(true).forEach(x=>{if(!seen.has(x.kind+x.id))out.push(x)})}
   return out.slice(0,100);
 }
