@@ -218,6 +218,17 @@ nav.tabs button.add svg{background:var(--accent);width:36px;height:36px;padding:
 .hc b{display:block;font-family:var(--display);font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
 @keyframes pop{0%{transform:translateX(-50%) scale(.85);opacity:0}100%{transform:translateX(-50%) scale(1);opacity:1}}
 @media (prefers-reduced-motion:no-preference){.toast{animation:pop .2s ease-out}}
+.mimg{position:relative;border-radius:12px;overflow:hidden;line-height:0}
+.mimg img{width:100%;display:block}
+.mbox{position:absolute;border:2px solid var(--accent);background:rgba(198,242,78,.12);border-radius:6px;padding:0;min-height:14px;cursor:pointer}
+.mbox span{position:absolute;left:-2px;top:-2px;transform:translateY(-100%);background:var(--accent);color:#0f1115;font:700 11px/1 system-ui,sans-serif;padding:2px 5px;border-radius:5px 5px 5px 0}
+.mbox.on{background:rgba(198,242,78,.35);border-width:3px}
+.mlist{display:flex;flex-direction:column;gap:6px}
+.mitem{display:flex;gap:10px;align-items:flex-start;text-align:left;width:100%;padding:10px 12px;border-radius:12px;font-weight:400;line-height:1.35}
+.mitem.on{outline:2px solid var(--accent)}
+.mitem .kc{align-self:center}
+.mnum{flex:0 0 auto;min-width:22px;height:22px;border-radius:11px;background:var(--accent);color:#0f1115;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center}
+.mhit{display:block;color:var(--accent);margin-top:2px}
 </style>
 
 </head>
@@ -236,6 +247,7 @@ nav.tabs button.add svg{background:var(--accent);width:36px;height:36px;padding:
 <input type="file" id="healthFile" accept=".zip,.csv,text/csv,application/zip" multiple hidden>
 <input type="file" id="barcodeImg" accept="image/*" capture="environment" hidden>
 <input type="file" id="labelImg" accept="image/*" multiple hidden>
+<input type="file" id="menuImg" accept="image/*" hidden>
 
 <script>
 "use strict";
@@ -1131,6 +1143,123 @@ const DISH=[
  ['Latte macchiato','latte macchiato latte',[['blsN418000',300]]],
  ['Popcorn (kleine Tüte)','popcorn',[['blsC519000',60]]],
 ];
+/* ---------- Reise-Gerichte (Thailand, Indonesien, Ostküste Australien) – Mengen je typischer Portion, Nährwerte aus den Zutaten ----------
+   Format wie DISH, 5. Feld = Region. Synonyme enthalten englische Speisekarten-Namen, Umschriften und Thai-Schrift. */
+const TP={huhn:'blsV413182',schwein:'blsU554182',rind:'blsU151182',garnele:'blsT753182',tintenfisch:'blsT020182',fisch:'blsT204172',tofu:'blsX572412',ente:'blsV463172'};
+const DISH_TRAVEL=[
+ /* Thailand */
+ ['Pad Thai mit Garnelen','pad thai phad thai phat thai goong kung shrimp prawn ผัดไทย',[['blsC559032',200],['blsT753182',80],['ei',50],['blsH650100',40],['blsH110600',15],['blsX572412',20],['zucker',12],['sojasauce',10],['rapsoel',15],['fruehlingszwiebel',10],['zitrone',10]],0,'Thailand'],
+ ['Pad Thai mit Huhn','pad thai phad thai gai kai chicken ผัดไทยไก่',[['blsC559032',200],['blsV413182',90],['ei',50],['blsH650100',40],['blsH110600',15],['zucker',12],['sojasauce',10],['rapsoel',15],['fruehlingszwiebel',10],['zitrone',10]],0,'Thailand'],
+ ['Pad Kra Pao mit Huhn, Reis und Spiegelei','pad kra pao krapow kaprao gaprao kaphrao phat kaphrao gai kai holy basil chicken rice fried egg kai dao ผัดกะเพรา กะเพราไก่',[['reis',200],['blsV413182',120],['ei',55],['rapsoel',20],['blsG061000',8],['knoblauch',5],['paprika',15],['sojasauce',15],['zucker',5]],0,'Thailand'],
+ ['Khao Soi (Curry-Nudelsuppe)','khao soi khaosoi khao soy kao soi curry noodle soup northern chiang mai ข้าวซอย',[['blsE432032',150],['blsV4A5142',120],['blsH154000',100],['bruehe',150],['blsE430082',20],['zwiebel',15],['rapsoel',5],['zitrone',5]],0,'Thailand'],
+ ['Khao Man Gai (Huhn mit Reis)','khao man gai kao man kai hainanese chicken rice steamed chicken ข้าวมันไก่',[['reis',220],['rapsoel',8],['blsV413132',120],['gurke',30],['bruehe',200],['sojasauce',15],['zucker',5],['ingwer',3]],0,'Thailand'],
+ ['Khao Pad (gebratener Reis mit Huhn)','khao pad kao pad khao phat fried rice chicken gai kai ข้าวผัด',[['reis',250],['blsV413182',80],['ei',50],['rapsoel',15],['zwiebel',30],['tomate',30],['sojasauce',10],['gurke',20],['zitrone',5]],0,'Thailand'],
+ ['Tom Yum Goong (scharf-saure Garnelensuppe)','tom yum tom yam goong kung prawn shrimp spicy sour soup ต้มยำ ต้มยำกุ้ง',[['blsT753132',100],['champignons',60],['blsX411243',350],['tomate',40],['zitrone',15],['paprika',10],['rapsoel',8],['zucker',5],['sojasauce',8]],0,'Thailand'],
+ ['Tom Kha Gai (Kokossuppe mit Huhn)','tom kha gai tom kha kai coconut soup chicken galangal ต้มข่า ต้มข่าไก่',[['blsV413132',100],['blsH154000',150],['blsX411243',200],['champignons',50],['zitrone',10],['zucker',5],['sojasauce',8]],0,'Thailand'],
+ ['Grünes Curry mit Huhn und Reis','green curry gaeng keow wan kaeng khiao wan keaw wan chicken gai kai แกงเขียวหวาน',[['blsV413182',120],['blsH154000',150],['blsG510142',60],['blsH610132',30],['blsG061000',5],['zucker',8],['sojasauce',10],['rapsoel',5],['reis',200]],0,'Thailand'],
+ ['Rotes Curry mit Huhn und Reis','red curry gaeng phed kaeng phet daeng chicken gai kai แกงเผ็ด แกงแดง',[['blsV413182',120],['blsH154000',150],['blsH610132',40],['blsG510142',40],['blsG061000',5],['zucker',8],['sojasauce',10],['rapsoel',5],['reis',200]],0,'Thailand'],
+ ['Massaman Curry mit Huhn und Reis','massaman matsaman mussaman curry chicken gai potato peanut แกงมัสมั่น มัสมั่น',[['blsV413182',120],['blsH154000',150],['kartoffeln',100],['blsH110600',20],['zwiebel',30],['zucker',12],['sojasauce',8],['reis',200]],0,'Thailand'],
+ ['Panang Curry mit Huhn und Reis','panang phanaeng penang curry chicken gai พะแนง',[['blsV413182',120],['blsH154000',150],['blsH110600',10],['zucker',8],['sojasauce',8],['blsG061000',4],['reis',200]],0,'Thailand'],
+ ['Som Tam (grüner Papayasalat)','som tam somtam som tum papaya salad green papaya ส้มตำ',[['blsF517100',150],['tomate',40],['blsX5A8000',30],['blsH110600',15],['zitrone',15],['zucker',10],['sojasauce',10],['knoblauch',5],['paprika',5]],0,'Thailand'],
+ ['Larb Gai (scharfer Hackfleischsalat)','larb laab larp lab gai kai moo minced chicken salad isaan ลาบ ลาบไก่',[['blsV413182',120],['zwiebel',20],['fruehlingszwiebel',10],['zitrone',15],['sojasauce',10],['reisroh',8],['blsG061000',5],['paprika',5]],0,'Thailand'],
+ ['Gai Yang (Thai-Grillhähnchen)','gai yang kai yang kai yaang grilled chicken bbq chicken ไก่ย่าง',[['blsY560312',150],['zucker',5],['sojasauce',5]],0,'Thailand'],
+ ['Klebreis (Portion)','sticky rice khao niao khao niew khao neow glutinous rice ข้าวเหนียว',[['reis',150]],0,'Thailand'],
+ ['Mango Sticky Rice','mango sticky rice khao niao mamuang khao niew mamuang mango klebreis dessert ข้าวเหนียวมะม่วง',[['reis',120],['blsH154000',50],['zucker',15],['blsF516100',150],['blsH420100',2]],0,'Thailand'],
+ ['Pad See Ew (Bandnudeln mit Sojasoße)','pad see ew pad si io phat si io pad see iew wide rice noodles soy sauce ผัดซีอิ๊ว',[['blsC559032',220],['blsV413182',80],['ei',50],['brokkoli',60],['sojasauce',20],['zucker',8],['rapsoel',15]],0,'Thailand'],
+ ['Pad Woon Sen (gebratene Glasnudeln)','pad woon sen phat wun sen glass noodles stir fried ผัดวุ้นเส้น',[['blsC559032',180],['ei',50],['blsV413182',70],['blsG342100',50],['tomate',30],['karotte',20],['zwiebel',20],['rapsoel',15],['sojasauce',10],['zucker',5]],0,'Thailand'],
+ ['Pad Pak Boong (Wasserspinat aus dem Wok)','pad pak boong phat phak bung morning glory water spinach stir fried ผัดผักบุ้ง',[['blsG211100',150],['knoblauch',10],['rapsoel',12],['sojasauce',15],['zucker',4],['paprika',5]],0,'Thailand'],
+ ['Pad Pak Ruam (gebratenes Mischgemüse)','pad pak ruam phat phak ruam mixed vegetables stir fried ผัดผักรวม',[['brokkoli',60],['karotte',40],['blsG342100',50],['champignons',40],['rapsoel',12],['sojasauce',15],['zucker',4]],0,'Thailand'],
+ ['Kuay Teow Nam (Reisnudelsuppe)','kuay teow kuay tiew guay tiew kuai tiao noodle soup rice noodle soup boat noodles ก๋วยเตี๋ยว',[['blsC559032',150],['blsX411243',350],['blsU554182',50],['blsU151182',30],['blsH650100',30],['fruehlingszwiebel',5],['rapsoel',3]],0,'Thailand'],
+ ['Sai Ua (Chiang-Mai-Kräuterwurst)','sai ua sai oua northern thai sausage chiang mai sausage ไส้อั่ว',[['blsW183000',100]],0,'Thailand'],
+ ['Nam Prik Ong mit Gemüse','nam prik ong nam phrik ong chili dip minced pork tomato น้ำพริกอ่อง',[['blsU020182',50],['tomate',60],['rapsoel',8],['gurke',60],['blsG342100',40],['blsX5A8000',30]],0,'Thailand'],
+ ['Khao Kha Moo (geschmorte Schweinshaxe mit Reis)','khao kha moo kao ka moo stewed pork leg rice ข้าวขาหมู',[['blsU693162',120],['reis',200],['ei',50],['sojasauce',15],['zucker',8],['blsG321132',40]],0,'Thailand'],
+ ['Moo Ping (3 Schweinefleisch-Spieße)','moo ping mu ping grilled pork skewers หมูปิ้ง',[['blsU632162',90],['zucker',8],['sojasauce',5],['blsH154000',10]],0,'Thailand'],
+ ['Gai Tod (Thai Fried Chicken)','gai tod kai tod kai thot fried chicken ไก่ทอด',[['blsY561422',160]],0,'Thailand'],
+ ['Satay Gai (Hähnchenspieße mit Erdnusssoße)','satay sate gai chicken satay peanut sauce สะเต๊ะ',[['blsV413172',120],['erdnussmus',20],['blsH154000',30],['zucker',5],['gurke',30]],0,'Thailand'],
+ ['Po Pia Tod (frittierte Frühlingsrollen)','po pia tod popia spring rolls fried ปอเปี๊ยะ ปอเปี๊ยะทอด',[['blsX922163',120],['zucker',10]],0,'Thailand'],
+ ['Bananen-Roti (Thai-Pfannkuchen)','roti banana pancake roti kluay banana roti โรตี โรตีกล้วย',[['mehl',60],['banane',100],['rapsoel',15],['ei',30],['zucker',15],['milch',20]],0,'Thailand'],
+ ['Thai Iced Tea (Cha Yen)','thai tea cha yen iced tea milk tea ชาเย็น ชานม',[['blsM111300',100],['zucker',30]],0,'Thailand'],
+ ['Mango-Shake','mango shake mango smoothie fruit shake น้ำมะม่วงปั่น มะม่วงปั่น',[['blsF516100',200],['zucker',15]],0,'Thailand'],
+ ['Khao Tom (Reissuppe)','khao tom kao tom rice soup congee jok joke ข้าวต้ม โจ๊ก',[['reis',120],['blsX411243',350],['blsU020182',50],['ingwer',3],['fruehlingszwiebel',5]],0,'Thailand'],
+ ['Yam Woon Sen (Glasnudelsalat)','yum woon sen yam wun sen glass noodle salad ยำวุ้นเส้น',[['blsC559032',100],['blsT753132',50],['blsU020182',30],['zwiebel',20],['tomate',40],['zitrone',15],['zucker',5],['sojasauce',10]],0,'Thailand'],
+ ['Tod Mun Pla (Thai-Fischküchlein)','tod mun pla tod man pla thai fish cakes ทอดมันปลา ทอดมัน',[['blsT204100',100],['mehl',10],['rapsoel',15],['blsX5A8000',10],['zucker',8]],0,'Thailand'],
+ ['Pla Pao (gegrillter Fisch im Salzmantel)','pla pao pla phao salt crusted grilled fish whole fish barbecue fish ปลาเผา',[['blsT204172',250],['blsC559032',50],['salat',40],['zitrone',10]],0,'Thailand'],
+ ['Cashew-Huhn mit Reis','cashew chicken gai pad med mamuang kai phat met mamuang ไก่ผัดเม็ดมะม่วงหิมพานต์',[['blsV413182',120],['cashew',30],['zwiebel',30],['paprika',30],['rapsoel',15],['sojasauce',10],['zucker',8],['reis',200]],0,'Thailand'],
+ ['Süß-sauer mit Huhn und Reis','sweet and sour sweet sour chicken pad priew wan phat priao wan ผัดเปรี้ยวหวาน',[['blsV413182',120],['blsF501100',50],['gurke',30],['tomate',30],['zwiebel',30],['paprika',30],['rapsoel',15],['blsR141100',20],['zucker',12],['reis',200]],0,'Thailand'],
+ ['Frische Kokosnuss (Kokoswasser)','coconut fresh coconut young coconut kokosnuss nam maprao มะพร้าว น้ำมะพร้าว kelapa muda',[['blsH151000',300]],0,'Thailand'],
+ /* Indonesien */
+ ['Nasi Goreng Spezial (mit Spiegelei und Hähnchen)','nasi goreng special spesial fried rice telur ceplok fried egg ayam krupuk kerupuk',[['blsX891133',350],['ei',55],['rapsoel',5],['blsV413182',50],['chips',10]],0,'Indonesien'],
+ ['Mie Goreng mit Spiegelei','mie goreng mi goreng bakmi goreng fried noodles telur fried egg',[['blsX891212',350],['ei',55],['rapsoel',5]],0,'Indonesien'],
+ ['Sate Ayam mit Erdnusssoße und Reis','sate ayam satay chicken skewers peanut sauce bumbu kacang lontong',[['blsV413172',120],['blsH110600',25],['sojasauce',10],['zucker',10],['reis',150]],0,'Indonesien'],
+ ['Sate Lilit (balinesische Fischspieße)','sate lilit satay lilit fish satay bali',[['blsT204100',120],['blsH150100',20],['rapsoel',5]],0,'Indonesien'],
+ ['Gado-Gado','gado gado gadogado vegetable salad peanut sauce bumbu kacang',[['kartoffeln',80],['blsE111132',50],['blsX572412',90],['blsX5A8000',40],['blsG342100',40],['blsH650100',40],['gurke',30],['blsH110600',35],['zucker',10],['sojasauce',10],['chips',10]],0,'Indonesien'],
+ ['Rendang mit Reis','rendang beef rendang rendang sapi daging nasi',[['blsU151182',120],['blsH154000',60],['rapsoel',5],['reis',200]],0,'Indonesien'],
+ ['Ayam Goreng mit Reis','ayam goreng fried chicken nasi ayam goreng',[['blsV4A5182',150],['rapsoel',10],['reis',200],['tomate',20]],0,'Indonesien'],
+ ['Ayam Penyet / Geprek mit Reis','ayam penyet ayam geprek smashed chicken sambal tahu tempe lalapan',[['blsV4A5182',150],['rapsoel',15],['reis',200],['blsX572412',40],['blsG342100',30],['gurke',30],['tomate',20]],0,'Indonesien'],
+ ['Ayam Bakar mit Reis','ayam bakar grilled chicken kecap nasi',[['blsV4A5172',150],['sojasauce',10],['zucker',10],['reis',200]],0,'Indonesien'],
+ ['Soto Ayam (Hühnersuppe)','soto ayam chicken soup soto',[['blsX411243',350],['blsV413132',70],['blsC559032',50],['ei',25],['blsH650100',30],['blsG342100',20],['rapsoel',5],['reis',100]],0,'Indonesien'],
+ ['Bakso (Fleischbällchensuppe)','bakso bakso malang meatball soup baso',[['blsY036610',100],['blsX411243',350],['blsC559032',60],['blsE432032',50],['blsX572412',30],['fruehlingszwiebel',5],['rapsoel',3]],0,'Indonesien'],
+ ['Rawon (schwarze Rindfleischsuppe) mit Reis','rawon rawon daging black beef soup east java nasi',[['blsU281142',100],['blsY183013',350],['blsH650100',20],['blsE111132',25],['reis',200],['rapsoel',5]],0,'Indonesien'],
+ ['Nasi Campur (Reis mit Beilagen)','nasi campur nasi champur mixed rice bali',[['reis',200],['blsV413182',60],['blsX572412',40],['ei',25],['blsX5A8000',40],['blsH110600',10],['rapsoel',10],['chips',5]],0,'Indonesien'],
+ ['Babi Guling (balinesisches Spanferkel) mit Reis','babi guling suckling pig roast pork bali lawar',[['blsU579162',150],['reis',200],['blsX5A8000',50],['blsH150100',10]],0,'Indonesien'],
+ ['Bebek Betutu / Bebek Goreng mit Reis','bebek betutu bebek goreng crispy duck bali duck',[['blsV465162',200],['reis',200],['rapsoel',5]],0,'Indonesien'],
+ ['Nasi Uduk (Kokosreis mit Beilagen)','nasi uduk coconut rice',[['reis',220],['blsH154000',40],['ei',25],['blsV413182',50],['rapsoel',5],['blsH110600',10]],0,'Indonesien'],
+ ['Nasi Pecel (Reis mit Gemüse und Erdnusssoße)','nasi pecel pecel malang pecel madiun peanut sauce vegetables',[['reis',200],['blsG211100',50],['blsX5A8000',50],['blsH650100',40],['blsH110600',30],['zucker',10],['blsX572412',40]],0,'Indonesien'],
+ ['Mie Ayam (Nudeln mit Hähnchen)','mie ayam mi ayam bakmi ayam chicken noodles',[['blsE432032',200],['blsV413182',80],['sojasauce',10],['zucker',5],['rapsoel',8],['blsX411243',200],['blsG211100',30]],0,'Indonesien'],
+ ['Martabak Manis / Terang Bulan (2 Stück)','martabak manis terang bulan sweet martabak thick pancake chocolate peanut',[['mehl',50],['zucker',15],['butter',15],['schoko',15],['blsH110600',10],['milch',20],['ei',15]],0,'Indonesien'],
+ ['Martabak Telur (herzhaft)','martabak telur martabak telor savoury martabak egg',[['mehl',60],['ei',100],['blsU010182',50],['zwiebel',30],['rapsoel',20]],0,'Indonesien'],
+ ['Pisang Goreng (2 Stück)','pisang goreng banana fritters fried banana',[['banane',120],['mehl',30],['rapsoel',15],['zucker',5]],0,'Indonesien'],
+ ['Cap Cay (Gemüse aus dem Wok)','cap cay capcay chop suey mixed vegetables',[['brokkoli',50],['karotte',40],['blsG342100',50],['champignons',30],['blsV413182',60],['blsT753182',30],['rapsoel',12],['sojasauce',10],['staerke',5]],0,'Indonesien'],
+ ['Tempe Goreng (Portion)','tempe goreng tempeh goreng fried tempeh tempe',[['tofu',100],['rapsoel',10]],0,'Indonesien'],
+ ['Tahu Goreng (Portion)','tahu goreng fried tofu tahu',[['tofu',100],['rapsoel',10]],0,'Indonesien'],
+ ['Es Campur / Es Teler','es campur es teler shaved ice dessert iced fruit cocktail',[['blsH154000',50],['blsF516100',50],['avocado',40],['blsH150100',20],['zucker',25],['milch',20]],0,'Indonesien'],
+ ['Jus Alpukat (Avocado-Shake)','jus alpukat avocado juice avocado shake',[['avocado',100],['milch',100],['zucker',20],['schoko',10]],0,'Indonesien'],
+ ['Ikan Bakar (gegrillter Fisch) mit Reis','ikan bakar grilled fish jimbaran seafood bbq sambal',[['blsT204172',200],['sojasauce',10],['zucker',10],['rapsoel',10],['reis',200],['tomate',20]],0,'Indonesien'],
+ ['Sop Buntut (Ochsenschwanzsuppe) mit Reis','sop buntut oxtail soup sup buntut',[['blsU109142',150],['blsY183013',350],['kartoffeln',50],['karotte',40],['reis',150]],0,'Indonesien'],
+ ['Kerak Telor (Jakarta-Omelett mit Klebreis)','kerak telor kerak telur betawi omelette',[['reis',50],['ei',55],['blsH150100',15],['rapsoel',10]],0,'Indonesien'],
+ ['Ketoprak','ketoprak tofu rice cake peanut sauce jakarta',[['blsX572412',60],['blsC559032',50],['blsH650100',30],['gurke',30],['blsH110600',25],['zucker',8],['sojasauce',10],['reis',100]],0,'Indonesien'],
+ ['Pempek (Fischküchlein)','pempek empek empek fish cake cuko palembang',[['blsT204100',80],['staerke',60],['rapsoel',10],['zucker',15]],0,'Indonesien'],
+ ['Es Teh Manis (gesüßter Eistee)','es teh manis teh manis iced tea sweet tea',[['zucker',20]],0,'Indonesien'],
+ ['Kopi Susu (Kaffee mit Kondensmilch)','kopi susu es kopi susu coffee condensed milk',[['kaffee',150],['blsM111300',40],['zucker',20]],0,'Indonesien'],
+ ['Nasi Kuning (gelber Reis mit Beilagen)','nasi kuning yellow rice',[['reis',200],['blsH154000',30],['blsE111132',25],['blsV413182',50],['rapsoel',5]],0,'Indonesien'],
+ /* Australien (Ostküste) */
+ ['Meat Pie','meat pie aussie pie beef pie mince pie pie floater',[['blsD072000',60],['blsU010182',70],['blsX330043',35]],'Stück','Australien'],
+ ['Sausage Roll','sausage roll',[['blsD072000',50],['blsU065100',60]],'Stück','Australien'],
+ ['Chicken Parmi mit Chips und Salat','chicken parmi parma parmigiana parmy schnitzel chips salad',[['blsY591112',220],['passata',50],['blsW424000',20],['mozzarella',40],['blsX654042',150],['salat',50]],0,'Australien'],
+ ['Chicken Schnitzel mit Chips und Salat','chicken schnitzel chicken schnitty crumbed chicken chips salad',[['blsY591112',220],['blsX654042',150],['salat',50],['zitrone',5]],0,'Australien'],
+ ['Barramundi & Chips (Fish and Chips)','fish and chips fish n chips barramundi barra flathead snapper battered fish chips',[['blsT204172',180],['mehl',25],['rapsoel',25],['blsX654042',180],['zitrone',5],['mayo',15]],0,'Australien'],
+ ['Barramundi gegrillt mit Salat','grilled barramundi barra grilled fish salad snapper flathead',[['blsT204172',200],['salat',80],['tomate',50],['olivenoel',10],['zitrone',10]],0,'Australien'],
+ ['Smashed Avo auf Sauerteigbrot','smashed avo avocado toast avo toast sourdough feta',[['blsB311000',80],['avocado',80],['feta',20],['zitrone',5],['olivenoel',5]],0,'Australien'],
+ ['Smashed Avo mit pochiertem Ei','smashed avo poached egg avocado toast sourdough eggs',[['blsB311000',80],['avocado',80],['feta',20],['blsE107122',110],['olivenoel',5]],0,'Australien'],
+ ['Vegemite-Toast','vegemite toast vegemite',[['blsB314000',50],['butter',8]],'Stück','Australien'],
+ ['Lamington','lamington lamingtons',[['blsD077002',60],['blsS539900',15],['blsH150100',10]],'Stück','Australien'],
+ ['Pavlova','pavlova pav meringue',[['blsD610200',35],['sahne',40],['erdbeeren',30],['kiwi',20],['blsF508100',10]],0,'Australien'],
+ ['Tim Tam','tim tam timtam chocolate biscuit',[['blsD630600',10],['blsS539900',8]],'Stück','Australien'],
+ ['Anzac Biscuit','anzac biscuit anzac cookie oat biscuit',[['blsD701600',25]],'Stück','Australien'],
+ ['Aussie Burger mit allem','aussie burger with the lot beetroot pineapple egg bacon burger',[['blsY911060',220],['ei',55],['blsG613802',30],['blsF501100',30],['blsW415082',20],['gouda',20]],0,'Australien'],
+ ['Sausage Sizzle (Würstchen im Brot)','sausage sizzle snag sanga sausage in bread bunnings',[['blsB314000',30],['blsW183000',75],['zwiebel',20],['rapsoel',3],['blsR141100',10]],'Stück','Australien'],
+ ['Bacon & Egg Roll','bacon and egg roll bacon egg roll brekkie roll bbq sauce',[['broetchen',70],['blsW415082',40],['ei',55],['rapsoel',3],['blsR141100',15]],'Stück','Australien'],
+ ['Big Brekkie','big brekkie big breakfast eggs bacon sausage toast hash brown mushrooms',[['ei',110],['blsW415082',40],['blsW183000',60],['blsB311000',60],['butter',8],['tomate',60],['champignons',60],['blsX655022',60],['rapsoel',8]],0,'Australien'],
+ ['Fish Tacos (2 Stück)','fish tacos fish taco',[['blsB783012',60],['blsT204172',100],['blsG342100',40],['mayo',15],['avocado',20],['zitrone',5]],0,'Australien'],
+ ['Açaí Bowl','acai bowl açaí bowl smoothie bowl',[['beeren',150],['banane',60],['blsX0A3000',40],['honig',10],['kokosmilch',20]],0,'Australien'],
+ ['Banana Bread (1 Scheibe, getoastet mit Butter)','banana bread',[['blsD422600',90],['banane',20],['butter',10]],'Stück','Australien'],
+ ['Gekochte Prawns (Riesengarnelen) mit Cocktailsoße','prawns cooked prawns king prawns tiger prawns cocktail sauce prawn cocktail',[['blsT753132',200],['mayo',15],['blsR141100',10],['zitrone',5]],0,'Australien'],
+ ['Moreton Bay Bugs (gegrillt mit Butter)','moreton bay bugs balmain bugs bugs',[['blsT753172',200],['butter',15],['zitrone',5]],0,'Australien'],
+ ['Austern (6 Stück)','oysters natural oysters sydney rock oysters port stephens oysters kilpatrick',[['blsT780100',90],['zitrone',5]],0,'Australien'],
+ ['Salt & Pepper Calamari mit Chips','calamari salt and pepper squid squid rings chips',[['blsY686132',150],['blsX654042',150],['mayo',15],['zitrone',5]],0,'Australien'],
+ ['Steak Sandwich','steak sandwich steak sanga',[['blsB314000',90],['blsY135432',120],['zwiebel',30],['blsG613802',30],['salat',20],['tomate',30],['blsR141100',15]],0,'Australien'],
+ ['Rumpsteak mit Chips und Salat','rump steak scotch fillet sirloin porterhouse eye fillet steak chips salad wagyu',[['blsY135432',250],['blsX654042',150],['salat',50],['blsX330043',40]],0,'Australien'],
+ ['Lammkoteletts mit Gemüse','lamb chops lamb cutlets lamb rack',[['blsU727172',150],['kartoffeln',150],['erbsen',60],['blsX330043',40]],0,'Australien'],
+ ['Hot Chips (Pommes)','hot chips chips fries chicken salt',[['blsX654042',200]],0,'Australien'],
+ ['Potato Scallop / Potato Cake','potato scallop potato cake battered potato',[['kartoffeln',80],['mehl',20],['rapsoel',12]],'Stück','Australien'],
+ ['Flat White','flat white latte cappuccino magic piccolo',[['kaffee',60],['blsM111300',180]],0,'Australien'],
+ ['Iced Coffee (australisch, mit Eis und Sahne)','iced coffee iced latte',[['kaffee',50],['blsM111300',250],['eis',50],['sahne',20]],0,'Australien'],
+ ['Poke Bowl mit Lachs','poke bowl salmon poke',[['reis',180],['blsT410100',100],['avocado',50],['gurke',50],['blsG342100',30],['sojasauce',15],['mayo',10],['blsH420100',3]],0,'Australien'],
+ ['Fairy Bread','fairy bread',[['blsB314000',25],['butter',5],['zucker',5]],'Stück','Australien'],
+ ['Weihnachtsschinken (glasiert)','christmas ham glazed ham leg ham',[['blsW424000',120],['honig',8]],0,'Australien'],
+ ['Pulled Pork Burger','pulled pork burger brioche bun slaw bbq',[['broetchen',80],['blsY352212',120],['blsG342100',40],['mayo',15],['blsR141100',20]],0,'Australien'],
+];
+const DISH_REG={}; DISH_TRAVEL.forEach(x=>{DISH_REG[x[0]]=x[4]; DISH.push(x[3]?[x[0],x[1],x[2],x[3]]:[x[0],x[1],x[2]])});
 function dishSlug(s){return phon(s).replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40)}
 function ingKcal(ing){return ing.reduce((s,[fid,g])=>{const f=getFood(fid); return s+(f?f.per[0]*g/100:0)},0)}
 /* bestes einzelnes Lebensmittel für ein Wort (ohne Rezepte, ohne Rekursion) */
@@ -1158,7 +1287,7 @@ function materialize(kind,id){
   if(kind==='d'){const x=DISH[+id.slice(1)]; return saveDish(x[0],x[2],'dish',x[3])}
   if(kind==='c'){const [l,r]=id.slice(2).split('|'); const fl=getFood(l), fr=getFood(r); return saveDish(UI.q.trim().replace(/^./,c=>c.toUpperCase())||(fl.name+' mit '+fr.name),[[r,typGrams(r)],[l,Math.min(40,typGrams(l))]])}
   return id}
-function dishResults(ws,fuzzy){const out=[]; DISH.forEach((x,i)=>{const k=matchRank(x[0],ws,fuzzy,x[1]); if(k>=0)out.push({kind:'d',id:'d'+i,name:x[0],tag:[x[3]?'Gebäck · aus Zutaten berechnet':'Gericht · in Zutaten zerlegt','own'],kcal:ingKcal(x[2]),unit:'1 '+(x[3]||'Portion'),r:k})}); return out}
+function dishResults(ws,fuzzy){const out=[]; DISH.forEach((x,i)=>{const k=matchRank(x[0],ws,fuzzy,x[1]); if(k>=0)out.push({kind:'d',id:'d'+i,name:x[0],tag:[DISH_REG[x[0]]?DISH_REG[x[0]]+' · typisches Gericht, aus Zutaten berechnet':x[3]?'Gebäck · aus Zutaten berechnet':'Gericht · in Zutaten zerlegt','own'],kcal:ingKcal(x[2]),unit:'1 '+(x[3]||'Portion'),r:k})}); return out}
 function compoundResult(q){const sp=splitCompound(q); if(!sp)return null; const [l,r]=sp; const fl=getFood(l), fr=getFood(r);
   return {kind:'c',id:'c:'+l+'|'+r,name:`${q.trim().replace(/^./,c=>c.toUpperCase())}: ${fr.name} + ${fl.name}`,tag:['Aus zwei Teilen zusammengesetzt','own'],kcal:ingKcal([[l,Math.min(40,typGrams(l))],[r,typGrams(r)]]),unit:'1 Portion',r:0.5}}
 /* Im Claude-Artefakt: unbekanntes Gericht von Claude in Zutaten zerlegen lassen */
@@ -1214,6 +1343,7 @@ function vAdd(){
     <button data-act="online" ${UI.q.trim().length<2?'disabled':''}>${svgI('<circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c2.5 2.5 2.5 13.5 0 16M12 4c-2.5 2.5-2.5 13.5 0 16"/>')}Online</button>
   </div>
   <button data-act="label">${svgI('<path d="M7 3h10v18H7zM10 7h4M10 11h4M10 15h2"/>')}Packung lesen: Nährwerte und Zutaten</button>
+  <button data-act="menu">${svgI('<path d="M6 3h12v18H6zM9 7h6M9 11h6M9 15h4"/><path d="M3 9l2 2-2 2"/>')}Speisekarte scannen und übersetzen</button>
   ${UI.labelState?`<div class="note" id="lblState" role="status">${esc(UI.labelState)}</div>`:''}
   <div id="reader" ${UI.scanning?'':'hidden'}></div>
   ${UI.scanning?'<button data-act="stopscan">Scannen beenden</button>':''}
@@ -1501,6 +1631,155 @@ function labelGo(){const d=UI.label; const v=id=>{const x=document.getElementByI
   const given={}; Object.keys(d.vit||{}).forEach(k=>{if(MICRO.includes(k)&&!isNaN(+d.vit[k]))given[k]=+d.vit[k]});
   const id='own-'+uid(); const food={id,code:id,name,brand,per:fin.map(x=>Math.round(x*1000)/1000),portions:portion>0?[['1 Portion',portion]]:[],src:'label',micros:Object.keys(given).length>0,ingredients:ing};
   applyEstimate(food,est,given); S.foods[id]=food; Store.saveMeta(); UI.label=null; openAmount('f',id,food)}
+
+/* ---------- Speisekarte: Foto → Texterkennung auf dem Gerät → Übersetzung (offline, Wörterbuch) → Gericht wählen → eintragen ----------
+   Texterkennung: Android-App = ML Kit (Latein), Thai und iPhone/Web = Tesseract aus dem Ordner ocr/ (in der App enthalten, ohne Netz).
+   Übersetzung: Speisekarten-Wörterbuch Englisch, Indonesisch, Thai (Umschrift und Thai-Schrift) → Deutsch, längster Treffer zuerst. */
+function glossParse(s){const o={}; s.split('|').forEach(p=>{const i=p.indexOf('='); if(i>0)o[p.slice(0,i).trim()]=p.slice(i+1).trim()}); return o}
+const MENU_EN=glossParse('starters=Vorspeisen|starter=Vorspeise|entrees=Vorspeisen|entree=Vorspeise|appetizers=Vorspeisen|appetisers=Vorspeisen|small plates=kleine Teller|share plates=Teller zum Teilen|to share=zum Teilen|mains=Hauptgerichte|main course=Hauptgericht|main=Hauptgericht|desserts=Desserts|dessert=Dessert|sweets=Süßes|sides=Beilagen|side=Beilage|drinks=Getränke|beverages=Getränke|cold drinks=kalte Getränke|hot drinks=heiße Getränke|brekkie=Frühstück|breakfast=Frühstück|all day breakfast=Frühstück den ganzen Tag|brunch=Brunch|lunch=Mittagessen|dinner=Abendessen|kids menu=Kinderkarte|kids=Kinder|specials=Tagesangebote|today\'s special=Tagesgericht|chef\'s special=Empfehlung des Kochs|signature=Spezialität|salads=Salate|soups=Suppen|curries=Currys|noodles=Nudeln|rice dishes=Reisgerichte|seafood=Meeresfrüchte|vegetarian=vegetarisch|vegan=vegan|gluten free=glutenfrei|gf=glutenfrei|df=laktosefrei|dairy free=laktosefrei|v=vegetarisch|vg=vegan|'
+ +'chicken=Hähnchen|chook=Hähnchen|pork=Schwein|pork belly=Schweinebauch|beef=Rind|lamb=Lamm|duck=Ente|veal=Kalb|goat=Ziege|kangaroo=Känguru|prawns=Garnelen|prawn=Garnele|king prawns=Riesengarnelen|tiger prawns=Tigergarnelen|shrimp=Garnelen|shrimps=Garnelen|squid=Tintenfisch|calamari=Calamari (Tintenfisch)|octopus=Oktopus|fish=Fisch|barramundi=Barramundi (Riesenbarsch)|barra=Barramundi (Riesenbarsch)|snapper=Schnapper (Fisch)|flathead=Plattkopf (Fisch)|whiting=Wittling (Fisch)|salmon=Lachs|tuna=Thunfisch|oysters=Austern|oyster=Auster|mussels=Miesmuscheln|scallops=Jakobsmuscheln|crab=Krabbe|lobster=Hummer|bugs=Bärenkrebse|moreton bay bugs=Bärenkrebse|crayfish=Flusskrebs|mince=Hackfleisch|minced=gehackt|meatballs=Fleischbällchen|sausage=Wurst|sausages=Würstchen|snags=Würstchen|snag=Würstchen|bacon=Speck|ham=Schinken|eggs=Eier|egg=Ei|poached=pochiert|scrambled=Rührei|fried egg=Spiegelei|sunny side up=Spiegelei|omelette=Omelett|omelet=Omelett|hollandaise=Sauce Hollandaise|steak=Steak|rump=Hüftsteak|scotch fillet=Rib-Eye-Steak|sirloin=Lendensteak|eye fillet=Filetsteak|ribs=Rippchen|wings=Flügel|tenders=Hähnchenstreifen|nuggets=Nuggets|brisket=Rinderbrust|wagyu=Wagyu-Rind|'
+ +'grilled=gegrillt|chargrilled=vom Grill|char-grilled=vom Grill|bbq=vom Grill|barbecued=vom Grill|barbecue=Barbecue|roasted=geröstet|roast=Braten|slow cooked=langsam gegart|braised=geschmort|pan fried=in der Pfanne gebraten|pan-fried=in der Pfanne gebraten|seared=angebraten|deep fried=frittiert|deep-fried=frittiert|fried=gebraten|stir fried=im Wok gebraten|stir-fried=im Wok gebraten|stir fry=aus dem Wok|battered=im Backteig|beer battered=im Bierteig|crumbed=paniert|breaded=paniert|crispy=knusprig|crunchy=knusprig|steamed=gedämpft|smoked=geräuchert|pulled=gezupft|glazed=glasiert|marinated=mariniert|stuffed=gefüllt|baked=gebacken|toasted=getoastet|smashed=zerdrückt|house made=hausgemacht|housemade=hausgemacht|homemade=hausgemacht|fresh=frisch|local=regional|raw=roh|natural=natur|'
+ +'served with=serviert mit|topped with=belegt mit|tossed in=geschwenkt in|choice of=nach Wahl|your choice of=nach Wahl|add=dazu|extra=extra|with=mit|and=und|or=oder|on=auf|in=in|of=von|the=|a=|an=|our=unser|spicy=scharf|mild=mild|hot=heiß|sweet=süß|sour=sauer|salt and pepper=Salz und Pfeffer|salt & pepper=Salz und Pfeffer|'
+ +'chips=Pommes|hot chips=Pommes|fries=Pommes|shoestring fries=dünne Pommes|wedges=Kartoffelspalten|mash=Kartoffelpüree|mashed potato=Kartoffelpüree|hash brown=Kartoffelrösti|potato scallop=frittierte Kartoffelscheibe|salad=Salat|garden salad=gemischter Salat|side salad=Beilagensalat|caesar salad=Caesar Salad|slaw=Krautsalat|coleslaw=Krautsalat|rocket=Rucola|capsicum=Paprika|eggplant=Aubergine|zucchini=Zucchini|beetroot=Rote Bete|corn=Mais|sweet potato=Süßkartoffel|pumpkin=Kürbis|spinach=Spinat|mushrooms=Pilze|mushroom=Pilz|onion rings=Zwiebelringe|greens=grünes Gemüse|vegetables=Gemüse|veggies=Gemüse|veg=Gemüse|gravy=Bratensoße|aioli=Aioli (Knoblauchmayonnaise)|mayo=Mayonnaise|tartare sauce=Remoulade|tartare=Remoulade|tomato sauce=Ketchup|bbq sauce=Barbecue-Soße|sweet chilli=süße Chilisoße|sweet chili=süße Chilisoße|chilli=Chili|chili=Chili|lemon=Zitrone|lime=Limette|garlic=Knoblauch|herbs=Kräuter|cheese=Käse|haloumi=Halloumi (Grillkäse)|halloumi=Halloumi (Grillkäse)|avo=Avocado|guacamole=Guacamole|'
+ +'sourdough=Sauerteigbrot|toast=Toast|roll=Brötchen|bun=Brötchen|brioche=Brioche|wrap=Wrap|bowl=Bowl|burger=Burger|sandwich=Sandwich|sanga=Sandwich|toastie=überbackener Toast|pie=Pie (Pastete)|sausage roll=Wurst im Blätterteig|parmi=Parmi (Schnitzel mit Tomatensoße und Käse)|parma=Parmi (Schnitzel mit Tomatensoße und Käse)|parmigiana=Parmi (Schnitzel mit Tomatensoße und Käse)|schnitty=Schnitzel|with the lot=mit allem|'
+ +'cake=Kuchen|slice=Schnitte|ice cream=Eis|gelato=Eis|sorbet=Sorbet|cream=Sahne|whipped cream=Schlagsahne|custard=Vanillesoße|sticky date pudding=Dattelpudding mit Karamellsoße|cheesecake=Käsekuchen|waffles=Waffeln|pancakes=Pfannkuchen|hotcakes=Pfannkuchen|banana bread=Bananenbrot|fairy bread=Toast mit Butter und Streuseln|'
+ +'flat white=Flat White (Kaffee mit Milch)|long black=Long Black (schwarzer Kaffee)|short black=Espresso|latte=Milchkaffee|iced coffee=Eiskaffee (mit Eis und Sahne)|iced latte=Eis-Milchkaffee|juice=Saft|fresh juice=frischer Saft|smoothie=Smoothie|shake=Shake|milkshake=Milchshake|soft drink=Softdrink|water=Wasser|sparkling=mit Kohlensäure|still=ohne Kohlensäure|beer=Bier|on tap=vom Fass|wine=Wein|schooner=Schooner (425 ml Bier)|middy=Middy (285 ml Bier)|pint=Pint (570 ml)|coconut=Kokos|young coconut=junge Kokosnuss|'
+ +'fried rice=gebratener Reis|noodle soup=Nudelsuppe|rice noodles=Reisnudeln|glass noodles=Glasnudeln|egg noodles=Eiernudeln|flat noodles=Bandnudeln|steamed rice=gedämpfter Reis|jasmine rice=Jasminreis|sticky rice=Klebreis|coconut milk=Kokosmilch|curry=Curry|green curry=grünes Curry|red curry=rotes Curry|yellow curry=gelbes Curry|peanut sauce=Erdnusssoße|satay=Saté-Spieße|skewers=Spieße|spring rolls=Frühlingsrollen|dumplings=Teigtaschen|tofu=Tofu|mixed vegetables=gemischtes Gemüse|morning glory=Wasserspinat|holy basil=Thai-Basilikum|thai basil=Thai-Basilikum|basil=Basilikum|cashew nuts=Cashewkerne|cashew=Cashew|sweet and sour=süß-sauer|oyster sauce=Austernsoße|fish sauce=Fischsoße|soy sauce=Sojasoße|chili paste=Chilipaste|papaya salad=Papayasalat|soup=Suppe|clear soup=klare Suppe|minced pork=Schweinehack|minced chicken=Hähnchenhack|lemongrass=Zitronengras|ginger=Ingwer|shallots=Schalotten|peanuts=Erdnüsse|sesame=Sesam|mango=Mango|pineapple=Ananas|watermelon=Wassermelone|banana=Banane|passionfruit=Passionsfrucht|dragon fruit=Drachenfrucht|lychee=Litschi');
+const MENU_ID=glossParse('tusuk=Spieße|ayam=Huhn|sapi=Rind|daging=Fleisch|daging sapi=Rindfleisch|babi=Schwein|bebek=Ente|kambing=Ziege|ikan=Fisch|udang=Garnelen|cumi=Tintenfisch|cumi-cumi=Tintenfisch|kepiting=Krabbe|kerang=Muscheln|seafood=Meeresfrüchte|telur=Ei|telor=Ei|telur ceplok=Spiegelei|telur mata sapi=Spiegelei|telur dadar=Omelett|tahu=Tofu|tempe=Tempeh|nasi=Reis|nasi putih=weißer Reis|mie=Nudeln|mi=Nudeln|bakmi=Eiernudeln|bihun=Reisnudeln|kwetiau=breite Reisnudeln|soun=Glasnudeln|goreng=gebraten|bakar=gegrillt|panggang=gebraten|rebus=gekocht|kukus=gedämpft|penyet=zerdrückt|geprek=zerdrückt (knusprig)|pedas=scharf|tidak pedas=nicht scharf|manis=süß|asam=sauer|gurih=herzhaft|sayur=Gemüse|sayuran=Gemüse|kuah=Brühe|sop=Suppe|sup=Suppe|soto=Suppe|kecap=Sojasoße|kecap manis=süße Sojasoße|sambal=Chilisoße|bumbu kacang=Erdnusssoße|kacang=Erdnüsse|santan=Kokosmilch|kelapa=Kokos|kelapa muda=junge Kokosnuss|jeruk=Orange|jeruk nipis=Limette|es=eisgekühlt|es batu=Eiswürfel|teh=Tee|teh manis=süßer Tee|kopi=Kaffee|kopi susu=Kaffee mit Milch|jus=Saft|air=Wasser|air mineral=Mineralwasser|putih=weiß|panas=heiß|dingin=kalt|campur=gemischt|spesial=spezial|istimewa=spezial|pisang=Banane|mangga=Mango|nanas=Ananas|alpukat=Avocado|semangka=Wassermelone|pepaya=Papaya|dengan=mit|dan=und|tanpa=ohne|pakai=mit|porsi=Portion|lalapan=rohes Gemüse|kerupuk=Krabbenchips|krupuk=Krabbenchips|bawang=Zwiebel|bawang putih=Knoblauch|bawang goreng=Röstzwiebeln|jagung=Mais|kentang=Kartoffel|kangkung=Wasserspinat|buncis=grüne Bohnen|tauge=Sojasprossen|wortel=Karotte|kol=Kohl|kubis=Kohl|timun=Gurke|tomat=Tomate|keju=Käse|susu=Milch|gula=Zucker|madu=Honig|roti=Brot|lontong=Reiskuchen|ketupat=Reiskuchen|gulai=Curry|opor=Kokos-Curry|balado=in Chilisoße|sate=Spieße|lilit=gewickelt|bubur=Reisbrei|martabak=Martabak (gefüllter Pfannkuchen)|lumpia=Frühlingsrollen|pangsit=Teigtaschen|bakso=Fleischbällchen|makanan=Speisen|minuman=Getränke|makanan utama=Hauptgerichte|makanan pembuka=Vorspeisen|hidangan penutup=Desserts|cemilan=Snacks|harga=Preis|paket=Menü|hijau=grün|merah=rot|kuning=gelb|hitam=schwarz');
+const MENU_TR=glossParse('gai=Huhn|kai=Huhn|moo=Schwein|mu=Schwein|muu=Schwein|nuea=Rind|neua=Rind|nua=Rind|goong=Garnelen|kung=Garnelen|gung=Garnelen|pla=Fisch|pla muek=Tintenfisch|pla meuk=Tintenfisch|pla muk=Tintenfisch|talay=Meeresfrüchte|talae=Meeresfrüchte|thale=Meeresfrüchte|ped=Ente|bpet=Ente|kai dao=Spiegelei|khai dao=Spiegelei|kai jeow=Omelett|khai jiao=Omelett|khao=Reis|kao=Reis|khao suay=weißer Reis|khao niao=Klebreis|khao niew=Klebreis|khao neow=Klebreis|pad=gebraten (Wok)|phat=gebraten (Wok)|phad=gebraten (Wok)|tod=frittiert|tord=frittiert|thot=frittiert|yang=gegrillt|yaang=gegrillt|ping=gegrillt|pao=gegrillt|nueng=gedämpft|tom=gekocht|tom yum=scharf-saure Suppe (Tom Yum)|tom yam=scharf-saure Suppe (Tom Yum)|tom kha=Kokossuppe (Tom Kha)|gaeng=Curry|kaeng=Curry|keow wan=grün|khiao wan=grün|kiew wan=grün|phed=scharf|phet=scharf|daeng=rot|yam=Salat|yum=Salat|larb=Hackfleischsalat (Larb)|laab=Hackfleischsalat (Larb)|som tam=Papayasalat (Som Tam)|som tum=Papayasalat (Som Tam)|kuay teow=Reisnudeln|kuai tiao=Reisnudeln|guay tiew=Reisnudeln|kway teow=Reisnudeln|sen yai=breite Nudeln|sen lek=dünne Nudeln|woon sen=Glasnudeln|wun sen=Glasnudeln|ba mee=Eiernudeln|bamee=Eiernudeln|nam=Wasser|nam prik=Chilidip|prik=Chili|krapao=Thai-Basilikum|kra pao=Thai-Basilikum|kaprao=Thai-Basilikum|gaprao=Thai-Basilikum|krapow=Thai-Basilikum|kaphrao=Thai-Basilikum|horapa=Basilikum|pak=Gemüse|phak=Gemüse|pak boong=Wasserspinat|pak bung=Wasserspinat|see ew=Sojasoße|si io=Sojasoße|priew wan=süß-sauer|preaw wan=süß-sauer|med mamuang=Cashewkerne|mamuang=Mango|kluay=Banane|gluay=Banane|maprao=Kokosnuss|sapparot=Ananas|cha=Tee|cha yen=Eistee mit Milch|cha manao=Zitronentee|gafae=Kaffee|kafae=Kaffee|yen=kalt|ron=heiß|pun=Shake|pan=Shake|mai pet=nicht scharf|mai phet=nicht scharf|jay=vegan|jae=vegan|khao soi=Curry-Nudelsuppe (Khao Soi)|khao man gai=Hähnchen mit Reis (Khao Man Gai)|khao pad=gebratener Reis|khao phat=gebratener Reis|pad thai=Pad Thai (gebratene Reisnudeln)|phad thai=Pad Thai (gebratene Reisnudeln)|massaman=Massaman-Curry|matsaman=Massaman-Curry|panang=Panang-Curry|phanaeng=Panang-Curry|sai ua=Chiang-Mai-Kräuterwurst|kha moo=Schweinshaxe|moo ping=Schweinefleisch-Spieße|moo krob=knuspriger Schweinebauch|moo grob=knuspriger Schweinebauch|jok=Reisbrei|joke=Reisbrei|khao tom=Reissuppe|roti=Roti (Pfannkuchen)|nam prik ong=Chilidip mit Hack und Tomate|khanom=Dessert|kanom=Dessert|khanom jeen=Reisnudeln mit Curry|hor mok=gedämpftes Fischcurry|gai yang=gegrilltes Hähnchen|pla pao=gegrillter Fisch|tod mun=Fischküchlein');
+const MENU_TH=glossParse('ร้านอาหาร=Restaurant|ร้าน=Restaurant|เมนู=Speisekarte|ไก่=Huhn|หมู=Schwein|หมูกรอบ=knuspriger Schweinebauch|หมูสับ=Schweinehack|เนื้อ=Rind|กุ้ง=Garnelen|ปลาหมึก=Tintenfisch|ปลา=Fisch|ทะเล=Meeresfrüchte|เป็ด=Ente|ไข่ดาว=Spiegelei|ไข่เจียว=Omelett|ไข่=Ei|ข้าวเหนียว=Klebreis|ข้าวสวย=weißer Reis|ข้าว=Reis|ผัด=gebraten (Wok)|ทอด=frittiert|ย่าง=gegrillt|ปิ้ง=gegrillt|เผา=gegrillt|นึ่ง=gedämpft|อบ=gebacken|ต้ม=gekocht|ต้มยำ=scharf-saure Suppe (Tom Yum)|ต้มข่า=Kokossuppe (Tom Kha)|แกง=Curry|เขียวหวาน=grün|แดง=rot|เผ็ด=scharf|ไม่เผ็ด=nicht scharf|เผ็ดน้อย=wenig scharf|หวาน=süß|เปรี้ยว=sauer|ยำ=Salat|ลาบ=Hackfleischsalat (Larb)|ส้มตำ=Papayasalat (Som Tam)|ก๋วยเตี๋ยว=Reisnudeln|เส้นใหญ่=breite Nudeln|เส้นเล็ก=dünne Nudeln|เส้นหมี่=Fadennudeln|วุ้นเส้น=Glasnudeln|บะหมี่=Eiernudeln|น้ำ=Wasser|น้ำพริก=Chilidip|พริก=Chili|พริกไทย=Pfeffer|กะเพรา=Thai-Basilikum|โหระพา=Basilikum|ผัก=Gemüse|ผักบุ้ง=Wasserspinat|ผักรวม=gemischtes Gemüse|ซีอิ๊ว=Sojasoße|เปรี้ยวหวาน=süß-sauer|เม็ดมะม่วงหิมพานต์=Cashewkerne|มะม่วง=Mango|กล้วย=Banane|มะพร้าว=Kokosnuss|สับปะรด=Ananas|แตงโม=Wassermelone|มะละกอ=Papaya|ผลไม้=Obst|ชาเย็น=Eistee mit Milch|ชา=Tee|กาแฟ=Kaffee|เย็น=kalt|ร้อน=heiß|ปั่น=Shake|เบียร์=Bier|น้ำแข็ง=Eiswürfel|ผัดไทย=Pad Thai (gebratene Reisnudeln)|ข้าวซอย=Curry-Nudelsuppe (Khao Soi)|ข้าวมันไก่=Hähnchen mit Reis (Khao Man Gai)|ข้าวผัด=gebratener Reis|มัสมั่น=Massaman-Curry|พะแนง=Panang-Curry|สะเต๊ะ=Saté-Spieße|ปอเปี๊ยะ=Frühlingsrollen|โรตี=Roti (Pfannkuchen)|ไส้อั่ว=Chiang-Mai-Kräuterwurst|ขาหมู=Schweinshaxe|กระเทียม=Knoblauch|เต้าหู้=Tofu|ซุป=Suppe|ของหวาน=Dessert|เครื่องดื่ม=Getränke|อาหาร=Speisen|จาน=Teller|ราคา=Preis|บาท=Baht|เจ=vegan|มังสวิรัติ=vegetarisch|กับ=mit|และ=und|ใส่=mit|ไม่ใส่=ohne|ราดหน้า=mit Soße|ราด=über|โจ๊ก=Reisbrei|ข้าวต้ม=Reissuppe|ซี่โครง=Rippchen|ปีก=Flügel|น่อง=Keule|อก=Brust|หอยนางรม=Austern|หอย=Muscheln|ปู=Krabbe|ทอดมัน=Fischküchlein|ส้ม=Orange|มะนาว=Limette|ขิง=Ingwer|ตะไคร้=Zitronengras|พิเศษ=groß/extra|ธรรมดา=normal|ชุด=Menü|สด=frisch|นม=Milch|น้ำผลไม้=Saft|น้ำเปล่า=Wasser|โซดา=Soda');
+const MENU_LAT=Object.assign({},MENU_ID,MENU_TR,MENU_EN);
+const MENU_LAT_K=Object.keys(MENU_LAT).filter(Boolean).sort((a,b)=>b.split(' ').length-a.split(' ').length||b.length-a.length);
+const MENU_TH_K=Object.keys(MENU_TH).sort((a,b)=>b.length-a.length);
+const RE_THAI=/[\u0E00-\u0E7F]/;
+function thaiJoin(s){return String(s).replace(/\u0E4D\u0E32/g,'\u0E33').replace(/([\u0E00-\u0E7F])\s+(?=[\u0E00-\u0E7F])/g,'$1')}
+function deAccent(s){return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
+/* Thai-Schrift hat keine Leerzeichen: längster bekannter Begriff ab jeder Stelle */
+function trThai(run){const out=[]; let unk='', i=0;
+  while(i<run.length){const k=MENU_TH_K.find(k=>run.startsWith(k,i)); if(k){if(unk){out.push(unk);unk=''} if(MENU_TH[k])out.push(MENU_TH[k]); i+=k.length} else {unk+=run[i]; i++}}
+  if(unk)out.push(unk); return out.join(' ')}
+function trLatin(seg){const toks=deAccent(seg).toLowerCase().replace(/[’']/g,"'").match(/[a-z0-9'&-]+|[^a-z0-9'&\s-]+/g)||[]; const out=[]; let i=0;
+  while(i<toks.length){let hit=null;
+    for(let n=Math.min(4,toks.length-i);n>=1&&!hit;n--){const ph=toks.slice(i,i+n).join(' '); if(MENU_LAT[ph]!==undefined)hit=[n,MENU_LAT[ph]]; else if(n===1&&EN_DE[ph])hit=[1,EN_DE[ph]]; else if(n===1&&ph.length>3&&ph.endsWith('s')&&MENU_LAT[ph.slice(0,-1)]!==undefined)hit=[1,MENU_LAT[ph.slice(0,-1)]]}
+    if(hit){if(hit[1])out.push(hit[1]); i+=hit[0]} else {const w=toks[i]; out.push(/^[^a-z0-9]+$/.test(w)?w:w.charAt(0).toUpperCase()+w.slice(1)); i++}}
+  return out.join(' ').replace(/\s+([,.;:!?)])/g,'$1').replace(/\(\s+/g,'(')}
+function menuTranslate(text){const t=thaiJoin(text).trim(); if(!t)return '';
+  const parts=t.split(/([\u0E00-\u0E7F]+)/).filter(s=>s.trim()); const de=parts.map(p=>RE_THAI.test(p)?trThai(p):trLatin(p)).join(' ').replace(/\s+/g,' ').trim();
+  return de.charAt(0).toUpperCase()+de.slice(1)}
+/* Preise und Nummern abtrennen */
+const PRICE_RE=/(?:^|\s)((?:A?\$|AUD|฿|THB|Rp\.?|IDR)\s?\d[\d.,]*(?:\s?(?:k|rb|ribu|K))?|\d{1,3}(?:[.,]\d{3})+(?:\s?(?:k|rb|K))?|\d{1,4}(?:[.,]\d{1,2})?\s?(?:k|rb|ribu|K|baht|bht|฿|บาท|\.-|-)?)\s*$/;
+function splitPrice(s){let t=String(s).replace(/\s+/g,' ').trim().replace(/^[A-Z]?\d{1,3}[.)]\s+/,''); let price=''; const m=t.match(PRICE_RE);
+  if(m&&/[A-Za-z\u0E00-\u0E7F]/.test(t.slice(0,m.index))){price=m[1]; t=t.slice(0,m.index).replace(/[\s.·…_-]+$/,'')} else if(m&&m.index===0){price=m[1]; t=''}
+  return {name:t,price}}
+const MENU_HEAD=/^(starters?|entrees?|appeti[sz]ers?|small plates|share plates|mains?|main courses?|desserts?|sweets|sides?|drinks|beverages|cold drinks|hot drinks|coffee|tea|juices?|smoothies|shakes|cocktails|mocktails|beers?|wines?|breakfast|all day breakfast|brekkie|brunch|lunch|dinner|kids( menu)?|specials|salads?|soups?|curr(y|ies)|noodles?|rice( dishes)?|seafood|vegetarian|vegan|burgers?|sandwiches|wraps|pasta|pizzas?|grill|from the grill|makanan( utama| pembuka)?|minuman|hidangan penutup|cemilan|ของหวาน|เครื่องดื่ม|อาหาร\S*)$/i;
+function menuItems(lines){
+  const L=lines.map(l=>({...l,text:thaiJoin(String(l.text||'')).replace(/\s+/g,' ').trim()})).filter(l=>l.text);
+  const hs=L.map(l=>l.h||0).filter(Boolean).sort((a,b)=>a-b); const mh=hs[hs.length>>1]||20; const items=[]; let cur=null;
+  const unite=(b,l)=>{if(l.x==null)return; if(!b.box){b.box={x:l.x,y:l.y,w:l.w,h:l.h};return} const x2=Math.max(b.box.x+b.box.w,l.x+l.w), y2=Math.max(b.box.y+b.box.h,l.y+l.h); b.box.x=Math.min(b.box.x,l.x); b.box.y=Math.min(b.box.y,l.y); b.box.w=x2-b.box.x; b.box.h=y2-b.box.y};
+  const near=(b,l)=>!b.box||l.y==null||(l.y-(b.box.y+b.box.h)<mh*1.8&&l.y>=b.box.y-mh*0.5);
+  for(const l of L){const {name,price}=splitPrice(l.text);
+    if(!/[A-Za-z\u0E00-\u0E7F]{2,}/.test(name)){if(price){let best=null; for(const it of items){if(it.head||!it.box||l.y==null)continue; const d=Math.abs((it.box.y)-(l.y)); if(d<mh*1.6&&(!best||d<best[0]))best=[d,it]} if(best&&!best[1].price)best[1].price=price; else if(cur&&!cur.price&&!cur.head&&near(cur,l))cur.price=price} continue}
+    const words=name.split(' ').length, thai=RE_THAI.test(name);
+    if(!price&&words<=4&&MENU_HEAD.test(deAccent(name).toLowerCase().replace(/[^a-z\u0E00-\u0E7F ]/g,'').trim())){items.push(cur={head:true,name,box:null}); unite(cur,l); continue}
+    const lower=/^[a-z(,&+–-]/.test(name), descy=/^(with|served|topped|tossed|choice|dengan|pakai|w\/|incl)/i.test(name)||/,/.test(name)&&words>=4;
+    const small=cur&&cur.lh&&l.h&&l.h<cur.lh*0.88;
+    const bilingual=cur&&!cur.head&&!cur.desc&&cur.thai!==thai&&near(cur,l)&&(!price||!cur.price);
+    if(cur&&!cur.head&&near(cur,l)&&(lower||descy||small||bilingual)&&!(price&&cur.price&&!lower)){
+      if(bilingual&&!lower&&!descy){cur.alt=name} else cur.desc=(cur.desc?cur.desc+' ':'')+name; if(price&&!cur.price)cur.price=price; unite(cur,l); continue}
+    items.push(cur={name,price,thai,lh:l.h||0,box:null}); unite(cur,l)}
+  return items}
+/* ---------- Gericht zu einem Eintrag der Karte finden ---------- */
+const ROM_CANON={kai:'gai',mu:'moo',muu:'moo',kung:'goong',gung:'goong',phat:'pad',phad:'pad',kao:'khao',khaw:'khao',kaprao:'krapao',gaprao:'krapao',krapow:'krapao',kaphrao:'krapao',kapow:'krapao',kaeng:'gaeng',kang:'gaeng',neua:'nuea',nua:'nuea',thot:'tod',tord:'tod',yam:'yum',satay:'sate',telor:'telur',mi:'mie',bakmi:'mie',niew:'niao',neow:'niao',tiew:'teow',tiao:'teow',kuai:'kuay',guay:'kuay',phet:'phed',chilli:'chili',prawn:'prawns',shrimps:'prawns',shrimp:'prawns',noodle:'noodles',chips:'fries',parma:'parmi',parmy:'parmi',parmigiana:'parmi',barra:'barramundi',tempeh:'tempe',fritters:'goreng'};
+const MENU_STOP=new Set('with and or the of a an in on served topped our your choice add extra fresh house special spesial dengan dan pakai mit und von 1 2 3 4 5 6 pcs pc pieces portion porsi'.split(' '));
+function menuToks(s){const t=deAccent(thaiJoin(s)).toLowerCase(); const lat=(t.match(/[a-z0-9]+/g)||[]).map(w=>ROM_CANON[w]||w).filter(w=>w.length>1&&!MENU_STOP.has(w)); return lat}
+let DISH_IX=null;
+function dishIndex(){if(DISH_IX)return DISH_IX; const df={}; const ds=DISH.map((x,i)=>{const t1=menuToks(x[0]), t2=menuToks(x[1]); const toks=new Set([...t1,...t2]); const bi=new Set(); [t1,t2].forEach(a=>{for(let k=1;k<a.length;k++)bi.add(a[k-1]+' '+a[k])}); const thai=(x[1].match(/[\u0E00-\u0E7F]+/g)||[]); toks.forEach(t=>df[t]=(df[t]||0)+1); return {i,toks,bi,thai,reg:DISH_REG[x[0]]||''}});
+  const N=ds.length; const idf=t=>Math.log(1+N/(df[t]||0.5)); DISH_IX={ds,idf,df}; return DISH_IX}
+const PROT=[['tintenfisch',/\b(squid|calamari|cumi|pla muek|pla meuk|pla muk|octopus)\b|ปลาหมึก/],['garnele',/\b(prawns?|shrimps?|goong|kung|gung|udang)\b|กุ้ง/],['seafood',/\b(seafood|talay|talae|thale)\b|ทะเล/],['ente',/\b(duck|ped|bpet|bebek)\b|เป็ด/],['huhn',/\b(chicken|gai|kai|ayam|chook)\b|ไก่/],['schwein',/\b(pork|moo|mu|muu|babi)\b|หมู/],['rind',/\b(beef|nuea|neua|nua|sapi|wagyu)\b|เนื้อ/],['fisch',/\b(fish|pla|ikan|barramundi|barra|snapper|flathead|salmon|tuna)\b|ปลา/],['tofu',/\b(tofu|tahu|vegetarian|vegan|jay|jae)\b|เต้าหู้|เจ/]];
+const TPN={huhn:'Huhn',schwein:'Schwein',rind:'Rind',garnele:'Garnelen',tintenfisch:'Tintenfisch',fisch:'Fisch',tofu:'Tofu',ente:'Ente',seafood:'Meeresfrüchte'};
+function menuProtein(text){const t=deAccent(thaiJoin(text)).toLowerCase(); const p=PROT.find(([k,re])=>re.test(t)); return p?p[0]:null}
+function swapProtein(name,ing,p){if(!p)return {name,ing}; const ids=Object.values(TP); const has=ing.find(([f])=>ids.includes(f)); if(!has)return {name,ing};
+  const cur=Object.keys(TP).find(k=>TP[k]===has[0]); if(cur===p||(p==='seafood'&&(cur==='garnele'||cur==='tintenfisch')))return {name,ing};
+  let out=[]; ing.forEach(([f,g])=>{if(f!==has[0]){out.push([f,g]);return} if(p==='seafood'){out.push([TP.garnele,g/2],[TP.tintenfisch,g/2])} else out.push([TP[p],g])});
+  const dat=k=>k==='seafood'?'Meeresfrüchten':TPN[k]; const nn=name.includes('mit '+TPN[cur])?name.replace('mit '+TPN[cur],'mit '+dat(p)):name+' ('+TPN[p]+')'; return {name:nn,ing:out}}
+function menuMatches(it){const {ds,idf,df}=dishIndex(); const main=menuToks(it.name+' '+(it.alt||'')), desc=menuToks(it.desc||''), de=menuToks(it.de||''); const raw=thaiJoin(it.name+' '+(it.alt||'')+' '+(it.desc||''));
+  const res=[]; for(const d of ds){let s=0; const seen=new Set();
+    for(const t of main)if(d.toks.has(t)&&!seen.has(t)){s+=idf(t);seen.add(t)} for(const t of desc)if(d.toks.has(t)&&!seen.has(t)){s+=idf(t)*0.4;seen.add(t)} for(const t of de)if(d.toks.has(t)&&!seen.has(t)){s+=idf(t)*0.3;seen.add(t)}
+    for(let k=1;k<main.length;k++)if(d.bi.has(main[k-1]+' '+main[k]))s+=2.5;
+    for(const t of main)if(!d.toks.has(t)&&df[t])s-=0.3*idf(t);
+    for(const th of d.thai)if(th.length>=2&&raw.includes(th))s+=3+th.length/3;
+    if(s<=0)continue; s=s/(1+0.015*d.toks.size)+(d.reg?0.3:0); res.push([s,d.i])}
+  res.sort((a,b)=>b[0]-a[0]); const p=menuProtein(raw);
+  const top=res.length?res[0][0]:0; return res.filter(r=>r[0]>=Math.max(3.2,top*0.45)).slice(0,3).map(([s,i])=>{const x=DISH[i]; const sw=swapProtein(x[0],x[2],p); return {score:s,name:sw.name,ing:sw.ing,unit:x[3]||'Portion',reg:DISH_REG[x[0]]||''}})}
+/* ohne passendes Gericht: aus den erkannten Wörtern grob zusammensetzen */
+function menuEstimate(it){const raw=deAccent(thaiJoin(it.name+' '+(it.alt||'')+' '+(it.desc||''))).toLowerCase(); const has=re=>re.test(raw); const ing=[]; const p=menuProtein(raw);
+  const asian=has(/\b(nasi|mie|khao|pad|phat|gaeng|kaeng|goreng|curry|wok|stir|noodles?|rice|sate|satay|tom|soto|kuay|teow)\b|[\u0E00-\u0E7F]/);
+  if(p==='seafood')ing.push([TP.garnele,60],[TP.tintenfisch,60]); else if(p)ing.push([TP[p],asian?120:180]);
+  const soup=has(/\b(soup|soto|sop|sup|tom|kuah|broth|laksa)\b|ต้ม|ซุป/), curry=has(/\b(curry|gaeng|kaeng|gulai|opor|rendang|massaman|panang)\b|แกง/), salad=has(/\b(salad|yum|yam|som tam|gado)\b|ยำ|ส้มตำ/);
+  if(has(/\b(rice|nasi|khao|kao)\b|ข้าว/))ing.push(['reis',200]); else if(has(/\b(egg noodles?|mie|mi|bakmi|ba mee|bamee)\b|บะหมี่/))ing.push(['blsE432032',200]); else if(has(/\b(noodles?|kuay|teow|bihun|kwetiau|woon sen|pad thai|pasta|spaghetti)\b|เส้น|ก๋วยเตี๋ยว/))ing.push(['blsC559032',200]);
+  else if(has(/\b(chips|fries)\b/))ing.push(['blsX654042',150]); else if(has(/\b(sweet potato)\b/))ing.push(['suesskartoffel',150]); else if(has(/\b(mash|mashed|potato|potatoes|wedges|kentang)\b/))ing.push(['kartoffeln',200],['butter',8]); else if(has(/\b(burger|sandwich|roll|bun|wrap|toast|toastie|sourdough|roti)\b/))ing.push(['broetchen',80]);
+  if(soup)ing.push(['blsX411243',350]); if(curry)ing.push(['blsH154000',120]);
+  if(salad)ing.push(['salat',80],['tomate',40],['gurke',40]); else if(curry||has(/\b(pad|phat|stir|wok|vegetables?|veg|sayur|cap cay)\b|ผัด|ผัก/))ing.push(['brokkoli',40],['karotte',30],['zwiebel',20]);
+  if(has(/\b(battered|crumbed|breaded|tempura|schnitzel)\b/))ing.push(['mehl',20],['rapsoel',15]); else if(has(/\b(deep fried|fried|goreng|tod|thot|crispy)\b|ทอด/))ing.push(['rapsoel',15]); else if(has(/\b(stir|pad|phat|wok)\b|ผัด/))ing.push(['rapsoel',12]); else if(has(/\b(grilled|bakar|yang|bbq)\b|ย่าง/))ing.push(['rapsoel',3]);
+  if(has(/\b(egg|telur|telor|kai dao|khai dao)\b|ไข่/))ing.push(['ei',55]); if(has(/\b(cheese|keju)\b/))ing.push(['gouda',30]); if(has(/\b(peanut|kacang|satay|sate)\b/))ing.push(['blsH110600',20]);
+  const core=ing.length; if(asian&&!salad)ing.push(['sojasauce',10],['zucker',5]); if(!core||ing.length<2)return null;
+  const nm=(it.de||menuTranslate(it.name)).slice(0,60); return {name:nm+' (geschätzt)',ing,unit:'Portion',est:true}}
+/* ---------- Texterkennung ---------- */
+function wasmSimd(){try{return WebAssembly.validate(new Uint8Array([0,97,115,109,1,0,0,0,1,5,1,96,0,1,123,3,2,1,0,10,10,1,8,0,65,0,253,15,253,98,11]))}catch(e){return false}}
+let ocrW=null, ocrWL='', ocrLocal=null;
+async function tessLoad(){if(window.Tesseract)return; const base=new URL('ocr/',location.href).href;
+  try{await loadScript(base+'tesseract.min.js'); ocrLocal=base}catch(e){ocrLocal=null; await loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js')}}
+async function tessWorker(langs,progress){await tessLoad(); if(ocrW&&ocrWL===langs)return ocrW; if(ocrW){try{await ocrW.terminate()}catch(e){} ocrW=null}
+  const cdn='https://cdn.jsdelivr.net/npm/', opt={logger:m=>{if(m.status==='recognizing text')progress(Math.round(m.progress*100))}};
+  if(ocrLocal){opt.workerPath=ocrLocal+'worker.min.js'; opt.workerBlobURL=false; opt.langPath=ocrLocal.replace(/\/$/,''); opt.corePath=wasmSimd()?ocrLocal+'tesseract-core-simd-lstm.wasm.js':cdn+'tesseract.js-core@5.1.1/tesseract-core-lstm.wasm.js'}
+  ocrW=await Tesseract.createWorker(langs,1,opt); ocrWL=langs; return ocrW}
+function imgSize(b){return new Promise(res=>{const i=new Image(); i.onload=()=>{res([i.naturalWidth,i.naturalHeight]); URL.revokeObjectURL(i.src)}; i.onerror=()=>res([0,0]); i.src=URL.createObjectURL(b)})}
+async function ocrMenu(file,lang,progress){
+  if(lang!=='th'&&nativeOCR()){const big=await shrinkImage(file,2400); const r=await nativeOCR().recognize({base64:await blobB64(big)}); return {lines:r.lines||[],w:r.width,h:r.height,img:big,via:'Texterkennung (Handy, offline)'}}
+  const img=await prepOCR(file); const [w,h]=await imgSize(img); const wk=await tessWorker(lang==='th'?'tha+eng':'eng',progress);
+  const r=await wk.recognize(img,{},{text:true,blocks:true}); const lines=(r.data.lines||[]).map(l=>({text:l.text,x:l.bbox.x0,y:l.bbox.y0,w:l.bbox.x1-l.bbox.x0,h:l.bbox.y1-l.bbox.y0})).filter(l=>(l.text||'').trim()&&(l.confidence==null||l.confidence>20));
+  return {lines,w,h,img:await shrinkImage(file,1600),via:ocrLocal?'Texterkennung (offline)':'Texterkennung'}}
+function menuSame(a,b){const t=x=>new Set(deAccent(x).toLowerCase().match(/[a-z\u0E00-\u0E7F]{3,}/g)||[]); const A=t(a),B=t(b); if(!A.size||!B.size)return false; let c=0; A.forEach(w=>{if(B.has(w))c++}); return c/Math.min(A.size,B.size)>=0.5}
+const OCR_FILES=['tesseract.min.js','worker.min.js','tesseract-core-simd-lstm.wasm.js','eng.traineddata.gz','tha.traineddata.gz'];
+async function menuPrep(){const M=UI.menu=UI.menu||{items:[]}; const base=new URL('ocr/',location.href).href; let ok=0;
+  for(const f of OCR_FILES){M.busy='Lade für offline … '+(ok+1)+'/'+OCR_FILES.length; sheetMenu(); try{const r=await fetch(base+f,{cache:'reload'}); if(r.ok){await r.arrayBuffer(); ok++}}catch(e){}}
+  M.busy=''; M.err=ok===OCR_FILES.length?'':'Nicht alles konnte geladen werden. Versuch es mit Internet nochmal.'; try{localStorage.setItem('tf-ocr-prep',ok===OCR_FILES.length?'1':'')}catch(e){} toast(ok===OCR_FILES.length?'Speisekarten-Scanner ist jetzt offline bereit.':'Offline-Vorbereitung unvollständig'); sheetMenu()}
+function isNative(){try{return !!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform())}catch(e){return false}}
+UI.menu=null; UI.menuLang='en';
+async function readMenu(file){const M=UI.menu={busy:'Lese die Karte …',items:[],lang:UI.menuLang}; sheetMenu();
+  const prog=p=>{M.busy='Lese die Karte … '+p+' %'; const el=document.getElementById('menuState'); if(el)el.textContent=M.busy};
+  try{const caps=(!nativeOCR()&&Store.sample)?await Store.sample.limits().catch(()=>null):null;
+    if(caps&&caps.images&&navigator.onLine!==false&&!window.Capacitor){const im=await shrinkImage(file,1600);
+      const j=await Store.sample.json('Du siehst das Foto einer Speisekarte (Englisch, Thai oder Indonesisch). Liste jedes Gericht und Getränk auf. Antworte nur mit JSON: {"items":[{"orig": string (Name wie gedruckt), "desc": string (Beschreibung wie gedruckt oder leer), "de": string (deutsche Übersetzung von Name und Beschreibung), "price": string}]}',{images:[im],modelTier:'default'});
+      M.img=URL.createObjectURL(im); M.items=(j.items||[]).map(x=>({name:x.orig||'',desc:x.desc||'',de:x.de||menuTranslate((x.orig||'')+' '+(x.desc||'')),price:x.price||'',box:null})); M.via='Claude (online)'}
+    else{const r=await ocrMenu(file,UI.menuLang,prog); M.img=URL.createObjectURL(r.img); M.w=r.w; M.h=r.h; M.via=r.via; M.items=menuItems(r.lines);
+      M.items.forEach(it=>{if(it.head){it.de=menuTranslate(it.name);return} const d1=menuTranslate(it.name), d2=it.alt?menuTranslate(it.alt):''; it.de=d2&&!menuSame(d1,d2)?d1+' / '+d2:(it.thai&&d2?d2:d1); if(it.desc)it.deDesc=menuTranslate(it.desc)})}
+    M.items.forEach(it=>{if(!it.head){it.m=menuMatches(it); it.est=menuEstimate(it); if(!it.price&&!it.desc&&!it.m.length&&!it.est&&/[A-Z]/.test(it.name)&&it.name===it.name.toUpperCase())it.head=true}});
+    M.busy=''; if(!M.items.some(i=>!i.head))M.err='Auf dem Foto wurde kein Text erkannt. Halte die Karte gerade, mit gutem Licht, und fotografiere eher einen Ausschnitt als die ganze Seite.';
+  }catch(e){M.busy=''; M.err='Die Karte konnte nicht gelesen werden ('+(e&&e.message||'Fehler')+').'}
+  sheetMenu()}
+function sheetMenu(){const M=UI.menu; const items=M?M.items:[]; const it=M&&M.sel!=null?items[M.sel]:null;
+  const kc=o=>Math.round(ingKcal(o.ing));
+  const boxes=M&&M.img&&M.w?items.map((x,i)=>x.head||!x.box?'':`<button class="mbox ${M.sel===i?'on':''}" data-act="menupick" data-i="${i}" aria-label="${esc(x.de||x.name)}" style="left:${x.box.x/M.w*100}%;top:${x.box.y/M.h*100}%;width:${x.box.w/M.w*100}%;height:${x.box.h/M.h*100}%"><span>${items.slice(0,i+1).filter(y=>!y.head).length}</span></button>`).join(''):'';
+  let n=0; const list=items.map((x,i)=>{if(x.head)return `<div class="label" style="margin-top:8px">${esc(x.de||x.name)}${x.de&&x.de.toLowerCase()!==x.name.toLowerCase()?` <span class="muted" style="text-transform:none">· ${esc(x.name)}</span>`:''}</div>`; n++;
+    const best=x.m&&x.m[0]; return `<button class="mitem ${M.sel===i?'on':''}" data-act="menupick" data-i="${i}"><span class="mnum">${n}</span><span class="grow"><b>${esc(x.de||x.name)}</b>${x.price?` <span class="muted small">${esc(x.price)}</span>`:''}${x.deDesc?`<span class="small" style="display:block">${esc(x.deDesc)}</span>`:''}<span class="tiny muted" style="display:block">${esc(x.name)}${x.alt?' / '+esc(x.alt):''}${x.desc?' · '+esc(x.desc):''}</span>${best?`<span class="small mhit">≈ ${esc(best.name)} · ${kc(best)} kcal</span>`:x.est?`<span class="small mhit">Schätzung · ${kc(x.est)} kcal</span>`:''}</span></button>`}).join('');
+  openSheet(`<div class="stack"><div><div class="label">Speisekarte · übersetzen und eintragen</div><h2 style="margin-top:4px">${it?'Was nimmst du?':'Speisekarte scannen'}</h2>
+    <div class="small muted">${it?'Wähle das passende Gericht. Die Nährwerte sind aus typischen Zutaten geschätzt.':'Foto der Karte machen, dann dein Gericht antippen. Texterkennung und Übersetzung laufen auf dem Handy, auch ohne Internet.'}</div></div>
+   ${it?menuPickHtml(it):`
+   <div class="seg" role="group" aria-label="Sprache der Karte">${[['en','Englisch'],['id','Indonesisch'],['th','Thai']].map(([k,l])=>`<button data-act="menulang" data-l="${k}" class="${UI.menuLang===k?'on':''}">${l}</button>`).join('')}</div>
+   <button class="primary" data-act="menuphoto">${svgI('<path d="M4 8h3l2-2h6l2 2h3v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/>')}${M&&M.img?'Neues Foto der Karte':'Foto der Speisekarte'}</button>
+   ${!isNative()&&'serviceWorker' in navigator&&location.protocol==='https:'&&!(M&&M.img)?`<button class="sm" data-act="menuprep">${(()=>{try{return localStorage.getItem('tf-ocr-prep')}catch(e){return ''}})()?'✓ Offline bereit · nochmal laden':'Für unterwegs offline laden (ca. 8 MB)'}</button>`:''}
+   ${M&&M.busy?`<div class="note" id="menuState" role="status">${esc(M.busy)}</div>`:''}
+   ${M&&M.err?`<div class="note">${esc(M.err)}</div>`:''}
+   ${M&&M.img?`<div class="mimg"><img src="${M.img}" alt="Dein Foto der Speisekarte">${boxes}</div>`:''}
+   ${M&&items.length?`<div class="tiny muted">${items.filter(x=>!x.head).length} Einträge erkannt · ${esc(M.via||'')}. Tippe ein Kästchen oder einen Eintrag an.</div><div class="mlist">${list}</div>`:''}`}
+   <button data-act="${it?'menuback':'close'}">${it?'Zurück zur Karte':'Schließen'}</button></div>`)}
+function menuPickHtml(it){const kc=o=>Math.round(ingKcal(o.ing)); const opts=[...(it.m||[]).map((o,k)=>['m'+k,o]),...(it.est?[['e',it.est]]:[])];
+  return `<section class="card stack" style="gap:6px"><b>${esc(it.de||it.name)}</b>${it.deDesc?`<div class="small">${esc(it.deDesc)}</div>`:''}<div class="tiny muted">${esc(it.name)}${it.alt?' / '+esc(it.alt):''}${it.desc?' · '+esc(it.desc):''}${it.price?' · '+esc(it.price):''}</div></section>
+   ${opts.length?`<div class="list">${opts.map(([k,o])=>`<button class="mitem" data-act="menuadd" data-k="${k}"><span class="grow"><b>${esc(o.name)}</b><span class="tiny muted" style="display:block">${o.est?'aus den Wörtern der Karte zusammengesetzt':(o.reg?esc(o.reg)+' · ':'')+'typische Portion'} · ${o.ing.map(([f,g])=>{const x=getFood(f); return x?Math.round(g)+' g '+x.name.split(',')[0]:''}).filter(Boolean).slice(0,5).join(', ')}${o.ing.length>5?' …':''}</span></span><span class="kc">${kc(o)}</span></button>`).join('')}</div>`
+   :'<div class="note">Dazu kenne ich kein passendes Gericht. Such es selbst, z. B. nach der Übersetzung.</div>'}
+   <button data-act="menusearch">Selbst suchen: „${esc((it.de||it.name).slice(0,40))}“</button>`}
+function menuAdd(k){const M=UI.menu, it=M.items[M.sel]; const o=k==='e'?it.est:it.m[+k.slice(1)]; if(!o)return; const id=saveDish(o.name,o.ing,o.est?'menu-est':'menu',o.unit); openAmount('r',id)}
 
 /* Barcode-Scanner (html5-qrcode wird erst bei Bedarf geladen) */
 let scanner=null;
@@ -1934,6 +2213,14 @@ document.addEventListener('click',async ev=>{
     case 'photo':document.getElementById('barcodeImg').click();break;
     case 'label':document.getElementById('labelImg').click();break;
     case 'labelgo':labelGo();break;
+    case 'menu':sheetMenu();break;
+    case 'menuphoto':document.getElementById('menuImg').click();break;
+    case 'menulang':UI.menuLang=el.dataset.l;sheetMenu();break;
+    case 'menupick':UI.menu.sel=+el.dataset.i;sheetMenu();break;
+    case 'menuback':UI.menu.sel=null;sheetMenu();break;
+    case 'menuadd':menuAdd(el.dataset.k);break;
+    case 'menuprep':menuPrep();break;
+    case 'menusearch':{const it=UI.menu.items[UI.menu.sel]; UI.q=(it.de||it.name).replace(/\s*\([^)]*\)/g,'').slice(0,40); UI.menu.sel=null; closeSheet(); UI.tab='add'; render(); break}
     case 'online':searchOnline();break;
     case 'ean':lookupBarcode(document.getElementById('ean').value);break;
     case 'newfood':sheetNewFood();break;
@@ -1993,6 +2280,7 @@ document.addEventListener('change',ev=>{const id=ev.target.id;
 document.getElementById('healthFile').addEventListener('change',e=>{const f=[...e.target.files]; if(f.length)importHealth(f); e.target.value=''});
 document.getElementById('importFile').addEventListener('change',e=>{const f=e.target.files[0]; if(f)importJSON(f); e.target.value=''});
 document.getElementById('labelImg').addEventListener('change',e=>{const f=[...e.target.files]; if(f.length)readLabel(f); e.target.value=''});
+document.getElementById('menuImg').addEventListener('change',e=>{const f=e.target.files[0]; if(f)readMenu(f); e.target.value=''});
 document.getElementById('barcodeImg').addEventListener('change',e=>{const f=e.target.files[0]; if(f)scanPhoto(f); e.target.value=''});
 setInterval(()=>{if(UI.date>today()||(UI.lastToday&&UI.lastToday!==today()&&UI.date===UI.lastToday)){UI.date=today();render()} UI.lastToday=today()},60000);
 
