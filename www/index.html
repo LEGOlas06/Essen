@@ -707,8 +707,9 @@ function runsBlock(d){const rs=dayRuns(d).slice().sort((a,b)=>(a.t||0)-(b.t||0))
   const src={hc:'Health Connect',sh:'Samsung Health',hand:'von Hand'};
   const rows=rs.map(r=>`<div class="row" style="justify-content:space-between;gap:8px"><div class="stack" style="gap:0"><b>${km1(r.km)} km · ${Math.round(r.min||0)} min${runPace(r)?' · '+runPace(r):''}</b><span class="tiny muted">${r.t?new Date(r.t).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr · ':''}${src[r.src]||''}</span></div><div class="row" style="gap:6px"><b class="num">${Math.round(r.kcal||0)}</b><span class="tiny muted">kcal</span>${r.src==='hand'?`<button class="ghost sm" data-act="rundel" data-id="${esc(r.id)}" aria-label="Lauf löschen">✕</button>`:''}</div></div>`).join('');
   const note=g.useBurn||g.runAdd!==false?`<div class="tiny muted">Läufe erhöhen dein Tagesziel um ${Math.round(g.burnFactor*100)} % ihrer kcal${g.useBurn?' (Läufe aus Health Connect stecken schon in den Aktivkalorien)':''}.</div>`:'';
-  return `<div class="row" style="justify-content:space-between"><b>Laufen</b><span class="tiny muted">7 Tage: ${w.n} ${w.n===1?'Lauf':'Läufe'} · ${km1(w.km)} km</span></div>
-   ${rows||'<div class="tiny muted">Heute noch kein Lauf.</div>'}${rs.length?note:''}
+  return `<div class="row" style="justify-content:space-between"><b>Laufen</b><span class="tiny muted">7 Tage: ${w.n} von ${g.runGoal||3} Läufen · ${km1(w.km)} km</span></div>
+   ${bar(w.n/(g.runGoal||3)*100,'var(--flame)')}
+   ${rows||`<div class="tiny muted">Heute noch kein Lauf.${H?' Läufe aus Strava kommen automatisch, wenn in Strava unter Einstellungen → Health Connect das Teilen an ist.':''}</div>`}${rs.length?note:''}
    <div class="row wrapr"><button class="sm" data-act="runadd">+ Lauf eintragen</button>${H&&!g.hcRuns?'<button class="sm" data-act="hcruns">Läufe aus Health Connect holen</button>':''}</div>`}
 function sheetRun(){const now=new Date(), d=UI.date, hm=d===today()?String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0'):'18:00';
   openSheet(`<div class="stack"><h2>Lauf eintragen</h2><div class="small muted">${fmtDate(d)}. Die kcal schätzt die App aus Strecke und Gewicht (etwa 1 kcal je kg und km), wenn du sie leer lässt.</div>
@@ -2162,7 +2163,7 @@ async function syncHealth(interactive){
     /* Läufe (Trainings vom Typ Laufen/Laufband) der letzten 30 Tage */
     try{const {workouts}=await H.queryWorkouts({startDate:start.toISOString(),endDate:end.toISOString(),includeHeartRate:false,includeRoute:false,includeSteps:false});
       const by={}; (workouts||[]).filter(x=>/^running/i.test(String(x.workoutType||''))).forEach(x=>{const t=new Date(x.startDate), d=ymd(t);
-        (by[d]=by[d]||[]).push({id:'hc'+(x.id||t.getTime()),t:t.getTime(),km:Math.round((x.distance||0)/10)/100,min:Math.round((x.duration||0)/60),kcal:Math.round(x.calories||0),src:'hc'})});
+        (by[d]=by[d]||[]).push({id:'hc'+(x.id||t.getTime()),t:t.getTime(),km:Math.round((x.distance||0)/10)/100,min:Math.round((x.duration||0)/60),kcal:Math.round(x.calories||0)||runKcalEst((x.distance||0)/1000,(x.duration||0)/60),src:'hc'})});
       for(let i=0;i<30;i++){const d=addDays(today(),-i), b=S.body[d]; const old=b&&b.runs?b.runs.filter(r=>r.src!=='hc'):[]; const nw=old.concat(by[d]||[]);
         if(nw.length){const bb=(S.body[d]=S.body[d]||{}); bb.runs=nw.sort((a,c)=>(a.t||0)-(c.t||0))} else if(b&&b.runs){delete b.runs; if(!Object.keys(b).length)delete S.body[d]}}
       if(interactive)S.settings.hcRuns=1}catch(e){if(interactive)console.warn('Läufe:',e)}
@@ -2211,7 +2212,7 @@ function vMehr(){const g=S.settings;
   ${appCard()}
   ${haCard()}
   <section class="card stack" style="gap:8px"><h3>So funktioniert der Streak</h3><div class="small">Jeder Tag mit mindestens einem Eintrag zählt. Nach je 7 Tagen am Stück bekommst du einen Freeze (höchstens 2). Verpasst du einen Tag, springt automatisch ein Freeze ein und dein Streak bleibt. Abzeichen gibt es bei 3, 7, 14, 30, 50, 100, 200 und 365 Tagen.</div></section>
-  ${nativeHealth()?`<section class="card stack" style="gap:8px"><h3>Samsung Health live</h3><div class="small">Über Health Connect holt die App deine Aktivkalorien, dein Gewicht und deine Läufe automatisch, jedes Mal wenn du sie öffnest. In Samsung Health muss dafür unter Einstellungen → Health Connect das Teilen eingeschaltet sein.</div>
+  ${nativeHealth()?`<section class="card stack" style="gap:8px"><h3>Samsung Health live</h3><div class="small">Über Health Connect holt die App deine Aktivkalorien, dein Gewicht und deine Läufe (auch aus Strava) automatisch, jedes Mal wenn du sie öffnest. Für Strava: In Strava unter Einstellungen → Health Connect das Teilen der Aktivitäten einschalten. In Samsung Health muss dafür unter Einstellungen → Health Connect das Teilen eingeschaltet sein.</div>
    <button class="primary" data-act="hc">${g.hcSync?'Jetzt synchronisieren':'Mit Health Connect verbinden'}</button>${g.hcLast?`<div class="tiny muted">Zuletzt: ${new Date(g.hcLast).toLocaleString('de-DE')}</div>`:''}</section>`:''}
   <section class="card stack" style="gap:8px"><h3>Samsung Health importieren</h3>
    <div class="small">Samsung Health und Health Connect lassen sich nicht direkt mit einer Web-App verbinden. So geht es trotzdem: In Samsung Health auf <b>Menü → Einstellungen → Persönliche Daten herunterladen</b> tippen. Die ZIP-Datei (oder einzelne CSV-Dateien daraus) hier laden. Erkannt werden Aktivkalorien pro Tag, Gewicht und Läufe.</div>
