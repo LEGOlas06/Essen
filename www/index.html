@@ -379,7 +379,7 @@ const BLSI=new Map(BLS.map(x=>[x[0],x]));
 
 /* ---------- Rezepte: Zutaten in Gramm, Nährwerte rechnet die App ---------- */
 const R0=[
-{id:'r-zucchini',name:'Zucchini-Schnitzel-Menü (Pommes, Sauce, Salat)',src:'own',yield:4,unit:'Portion',ing:[['zucchini',1350],['ei',165],['mehl',75],['broesel',150],['parmesan',90],['rapsoel',60],['sauerrahm',250],['joghurt',150],['senf',5],['mayo',5],['kartoffeln',1100],['rapsoel',25],['salat',300],['tomate',250],['gurke',175],['zwiebel',60],['rapsoel',40],['essig',30],['senf',7],['honig',8]]},
+{id:'r-zucchini',name:'Zucchini-Schnitzel-Menü (Pommes, Sauce, Salat)',src:'own',yield:4,unit:'Portion',parts:[['Zucchini-Schnitzel',6],['Sauce',4],['Pommes',2],['Salat',8]],ing:[['zucchini',1350],['ei',165],['mehl',75],['broesel',150],['parmesan',90],['rapsoel',60],['sauerrahm',250],['joghurt',150],['senf',5],['mayo',5],['kartoffeln',1100],['rapsoel',25],['salat',300],['tomate',250],['gurke',175],['zwiebel',60],['rapsoel',40],['essig',30],['senf',7],['honig',8]]},
 {id:'r-salat',name:'Grüner Salat mit Senf-Dressing',src:'own',fav:true,yield:4,unit:'Portion',ing:[['salat',300],['tomate',250],['gurke',175],['zwiebel',60],['rapsoel',40],['essig',30],['senf',7],['honig',8]]},
 {id:'r-asciutta',name:'Vegane Pasta-Asciutta-Sauce (ohne Nudeln)',src:'own',yield:11,unit:'Portion',ing:[['soja',300],['passata',1650],['tomstueck',450],['zwiebel',550],['knoblauch',24],['tommark',45],['rapsoel',30],['bruehe',450],['zucker',5]]},
 {id:'r-risotto',name:'Cremiges Champignon-Risotto',src:'own',yield:3,unit:'Portion',ing:[['risottoreis',225],['champignons',500],['zwiebel',100],['knoblauch',8],['wein',100],['bruehe',825],['parmesan',50],['butter',40],['olivenoel',20]]},
@@ -494,7 +494,7 @@ const ORAC_RAW=[['nelke',290000],['oregano',175000],['zimt',131000],['kurkuma',1
 const ORAC_T=ORAC_RAW.map(([k,v])=>[phon(k).replace(/ /g,''),v]).sort((a,b)=>b[0].length-a[0].length);
 function oracOfName(name){const n=phon(name).replace(/ /g,''); for(const [k,v] of ORAC_T)if(n.includes(k))return v; return null}
 /* Gramm eines Eintrags und seiner Zutaten (Rezepte werden in Zutaten aufgelöst) */
-function entryParts(e){if(e.kind==='r'){const r=getRecipe(e.ref); if(r){const c=recipeCalc(r); const tot=r.ing.reduce((s,x)=>s+x[1],0)||1; const g=entryGrams(e);
+function entryParts(e){if(e.kind==='r'){const r=entryRecipe(e); if(r){const c=recipeCalc(r); const tot=r.ing.reduce((s,x)=>s+x[1],0)||1; const g=entryGrams(e);
     return r.ing.map(([fid,gr])=>{const f=getFood(fid); return f?{name:f.name,per:f.per,g:g*gr/tot}:null}).filter(Boolean)}}
   const g=entryGrams(e); if(!g)return []; const f=getFood(e.ref); return [{name:e.name,per:f?f.per:e.n.map(v=>v==null?null:v/g*100),g}]}
 function dayIndices(entries,t){const out={};
@@ -690,6 +690,15 @@ function getFood(id){ if(id===SUPP.id)return SUPP.food; if(id&&id.startsWith('ff
 function allRecipes(){return [...R0,...Object.values(S.recipes)]}
 function getRecipe(id){return R0.find(r=>r.id===id)||S.recipes[id]||null}
 function recipeCalc(r){const tot=zero();let g=0,missing=[]; const gap=EXT.map(()=>0); for(const [fid,gr] of r.ing){const f=getFood(fid); if(!f){missing.push(fid);continue} addTo(tot,f.per,gr/100); g+=gr; EXT.forEach((k,j)=>{if(f.per[NK_CORE+j]==null)gap[j]+=gr})} EXT.forEach((k,j)=>{if(g&&gap[j]>g*0.15)tot[NK_CORE+j]=null}); const per=tot.map(v=>v==null?null:v/r.yield); return {tot,per,grams:g/r.yield,missing}}
+/* Bestandteile weglassen: omit = Indizes der Zutaten, die nicht gegessen wurden (am Eintrag e.omit gespeichert).
+   r.parts = [[Name, Anzahl Zutaten], …] fasst aufeinanderfolgende Zutaten zu Komponenten zusammen; ohne parts ist jede Zutat eine Komponente. */
+function recipeGroups(r){if(r.parts){let i=0; return r.parts.map(([nm,n])=>{const ix=[]; for(let k=0;k<n&&i<r.ing.length;k++)ix.push(i++); return {name:nm,ix}}).filter(g=>g.ix.length)}
+  return r.ing.map(([fid],i)=>{const f=getFood(fid); return {name:f?String(f.name).split(',')[0]:fid,ix:[i]}})}
+function recipeWithout(r,omit){if(!r||!omit||!omit.length)return r; const o=new Set(omit); return {...r,ing:r.ing.filter((x,i)=>!o.has(i))}}
+function entryRecipe(e){return recipeWithout(getRecipe(e.ref),e.omit)}
+function omitLabel(r,omit){const o=new Set(omit||[]); return recipeGroups(r).filter(g=>g.ix.every(i=>o.has(i))).map(g=>g.name).join(', ')}
+function canOmit(r){return !!r&&r.unit!=='Stück'&&recipeGroups(r).length>1}
+function amtRecalc(a){const r=getRecipe(a.ref); if(!r)return; const rr=recipeWithout(r,a.omit); a.per=recipeCalc(rr).per; const l=omitLabel(r,a.omit); a.name=r.name+(l?' – ohne '+l:'')}
 /* Laufen: S.body[d].runs = [{id,t,km,min,kcal,src:'hc'|'sh'|'hand'}]. hc/sh kommen aus Health Connect bzw. Samsung Health
    und stecken dort schon in den Aktivkalorien des Tages; von Hand eingetragene Läufe kommen obendrauf. */
 function dayRuns(d){const b=S.body[d]; return b&&Array.isArray(b.runs)?b.runs:[]}
@@ -769,7 +778,7 @@ function render(){
 }
 const DROP='<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 3c3 4 6 7.2 6 11a6 6 0 0 1-12 0c0-3.8 3-7 6-11z" fill="currentColor"/></svg>';
 /* Wasser aus dem Essen: Gewicht minus Eiweiß, Kohlenhydrate, Fett, Ballaststoffe, Salz und ca. 1 % Mineralstoffe (Näherung) */
-function entryGrams(e){if(e.unit==='g'||e.unit==='ml')return e.amt; if(e.kind==='r'){const r=getRecipe(e.ref); if(r)return recipeCalc(r).grams*e.amt} return 0}
+function entryGrams(e){if(e.unit==='g'||e.unit==='ml')return e.amt; if(e.kind==='r'){const r=entryRecipe(e); if(r)return recipeCalc(r).grams*e.amt} return 0}
 function entryWater(e){if(e.ref===SUPP.id)return 0; const g=entryGrams(e); if(!g)return 0; const n=e.n; return Math.max(0,g*0.99-(n[1]+n[2]+n[4]+n[6]+n[7]))}
 function foodWater(d){return Math.round((S.days[d]||[]).reduce((s,e)=>s+entryWater(e),0))}
 function drinkGoal(d){const g=S.settings.waterGoal||2500; return S.settings.waterFood===false?g:Math.max(500,Math.round((g-foodWater(d))/50)*50)}
@@ -1396,10 +1405,10 @@ function svgI(p){return `<svg viewBox="0 0 24 24" width="18" height="18" fill="n
 /* Mengen-Dialog */
 function amtData(kind,id,food){
   if(kind==='d'||kind==='c'){id=materialize(kind,id); kind='r'}
-  if(kind==='r'){const r=getRecipe(id); const c=recipeCalc(r); return {kind,ref:id,name:r.name,per:c.per,unitMode:'p',unit:r.unit==='Stück'?'Stück':'Portion',amt:1,portions:[]}}
+  if(kind==='r'){const r=getRecipe(id); const c=recipeCalc(r); return {kind,ref:id,name:r.name,per:c.per,unitMode:'p',unit:r.unit==='Stück'?'Stück':'Portion',amt:1,portions:[],omit:[]}}
   const f=food||getFood(id); return {kind:'f',ref:f.id,name:f.name+(f.brand?' ('+f.brand+')':''),per:f.per,unitMode:'g',unit:'g',amt:(f.portions&&f.portions[0]?f.portions[0][1]:100),noMicro:f.micros===false,portions:f.portions||[],est:f.est||null,rng:f.rng||null}}
 function openAmount(kind,id,food){UI.amt=amtData(kind,id,food); sheetAmount()}
-function makeEntry(a,tm){const f=a.unitMode==='g'?a.amt/100:a.amt; const e={id:uid(),kind:a.kind,ref:a.ref,name:a.name,amt:a.amt,unit:a.unitMode==='g'?'g':a.unit,meal:UI.meal,time:tm,n:NK.map((k,i)=>{const v=a.per[i]; return v==null?(i<NK_CORE?0:null):Math.round(v*f*1000)/1000}),t:Date.now()}; if(a.noMicro)e.noMicro=true; if(a.rng)e.rng=a.rng.map(arr=>arr.map(v=>Math.round(v*f*1000)/1000)); return e}
+function makeEntry(a,tm){const f=a.unitMode==='g'?a.amt/100:a.amt; const e={id:uid(),kind:a.kind,ref:a.ref,name:a.name,amt:a.amt,unit:a.unitMode==='g'?'g':a.unit,meal:UI.meal,time:tm,n:NK.map((k,i)=>{const v=a.per[i]; return v==null?(i<NK_CORE?0:null):Math.round(v*f*1000)/1000}),t:Date.now()}; if(a.noMicro)e.noMicro=true; if(a.omit&&a.omit.length)e.omit=[...a.omit]; if(a.rng)e.rng=a.rng.map(arr=>arr.map(v=>Math.round(v*f*1000)/1000)); return e}
 /* Mehrfachauswahl */
 UI.sel=[];
 function selKey(kind,id){return kind+':'+id}
@@ -1428,7 +1437,7 @@ function addAll(){const tm=(document.getElementById('mTime')||{}).value||nowHM()
 /* Lebensmittel-Ampel je 100 g (Grenzwerte wie auf Ampelkarten der Krankenkassen, nach britischem FSA-Schema; Getränke halbe Grenzen) */
 const AMPEL=[['fat','Fett',3,17.5],['sat','Ges. Fette',1.5,5],['sugar','Zucker',5,22.5],['salt','Salz',0.3,1.5]];
 const AMPEL_D={fat:[1.5,8.75],sat:[0.75,2.5],sugar:[2.5,11.25],salt:[0.3,0.75]};
-function ampelHtml(a){let per=null; if(a.unitMode==='g')per=a.per; else if(a.kind==='r'){const r=getRecipe(a.ref); const c=r&&recipeCalc(r); if(c&&c.grams>0)per=a.per.map(v=>v==null?null:v/c.grams*100)}
+function ampelHtml(a){let per=null; if(a.unitMode==='g')per=a.per; else if(a.kind==='r'){const r=recipeWithout(getRecipe(a.ref),a.omit); const c=r&&recipeCalc(r); if(c&&c.grams>0)per=a.per.map(v=>v==null?null:v/c.grams*100)}
   if(!per)return ''; const drink=a.unit==='ml';
   return `<div class="ampel" aria-label="Ampel je 100 ${drink?'ml':'g'}">${AMPEL.map(([k,l,lo,hi])=>{if(drink)[lo,hi]=AMPEL_D[k]; const v=per[IDX[k]]||0; const c=v<=lo?'good':v>hi?'low':'warn'; return `<span class="amp ${c}"><i></i>${l}<b class="num">${fmt(v)} g</b></span>`}).join('')}<span class="tiny muted" style="flex-basis:100%">Ampel je 100 ${drink?'ml':'g'}: grün wenig, gelb mittel, rot viel</span></div>`}
 /* Mahlzeitenteller (ÖGK): etwa die Hälfte Gemüse/Obst, ein Viertel stärkereiche Beilage, ein Viertel Eiweiß */
@@ -1442,17 +1451,24 @@ function plateGroup(fid,name){let cat='';
   if(cat){for(const g in PL_CAT)if(PL_CAT[g].some(w=>cat.includes(w)))return g; if(/Getränk|Fett|Öl|Süß|Süss|Würz|Zucker|Schoko|Backen|Nüsse|drinks/.test(cat))return null}
   const n=' '+phon(name||'')+' '; for(const g of ['prot','starch','veg'])if(PL_KW[g].some(w=>n.includes(w)))return g; return null}
 function plateOf(es){const g={veg:0,starch:0,prot:0};
-  es.forEach(e=>{if(e.kind==='r'){const r=getRecipe(e.ref); if(!r)return; const tot=r.ing.reduce((s,x)=>s+x[1],0)||1, eg=entryGrams(e); r.ing.forEach(([fid,gr])=>{const f=getFood(fid); const k=plateGroup(fid,f&&f.name); if(k)g[k]+=eg*gr/tot})}
+  es.forEach(e=>{if(e.kind==='r'){const r=entryRecipe(e); if(!r)return; const tot=r.ing.reduce((s,x)=>s+x[1],0)||1, eg=entryGrams(e); r.ing.forEach(([fid,gr])=>{const f=getFood(fid); const k=plateGroup(fid,f&&f.name); if(k)g[k]+=eg*gr/tot})}
     else{const k=plateGroup(e.ref,e.name); const gr=entryGrams(e); if(k&&gr)g[k]+=gr}});
   return g}
 function plateHtml(es,meal){if((meal!=='l'&&meal!=='d')||!es.length)return ''; const g=plateOf(es); const sum=g.veg+g.starch+g.prot; if(sum<120)return '';
   const p=k=>Math.round(g[k]/sum*100); const tip=p('veg')<35?'Mehr Gemüse oder Obst: Auf dem ÖGK-Teller ist es etwa die Hälfte.':p('prot')<12?'Eine Eiweißquelle fehlt fast (z. B. Hülsenfrüchte, Fisch, Ei, Milchprodukte).':p('starch')>45?'Viel Beilage: Laut ÖGK-Teller reicht etwa ein Viertel.':'Passt gut zum ÖGK-Teller.';
   return `<div class="plate"><div class="plbar"><i style="width:${p('veg')}%;background:var(--good)"></i><i style="width:${p('starch')}%;background:var(--carb)"></i><i style="width:${p('prot')}%;background:var(--prot)"></i></div><div class="tiny muted">Teller: Gemüse/Obst ${p('veg')} % (Ziel ~50) · Beilage ${p('starch')} % (~25) · Eiweiß ${p('prot')} % (~25). ${tip}</div></div>`}
+function partsHtml(a){if(a.kind!=='r')return ''; const r=getRecipe(a.ref); if(!canOmit(r))return ''; const o=new Set(a.omit||[]); const gs=recipeGroups(r);
+  const open=a.showParts!=null?a.showParts:(!!r.parts||o.size>0); const n=gs.filter(g=>g.ix.every(i=>o.has(i))).length;
+  return `<details class="card" id="amtParts" ${open?'open':''}><summary class="small"><b>Bestandteile</b> <span class="muted">${n?`${n} weggelassen`:'alles gegessen? Sonst abwählen'}</span></summary>
+   <div class="list" style="margin-top:6px">${gs.map((g,gi)=>{const k=recipeCalc({...r,ing:g.ix.map(i=>r.ing[i])}).per[0]; const on=!g.ix.every(i=>o.has(i));
+     return `<label class="row small" style="gap:10px;padding:6px 0;${on?'':'opacity:.55'}"><input type="checkbox" data-omit="${gi}" style="width:auto" ${on?'checked':''}><span class="grow" style="${on?'':'text-decoration:line-through'}">${esc(g.name)}</span><span class="num muted">${Math.round(k)} kcal</span></label>`}).join('')}</div>
+   <div class="tiny muted">kcal je ${r.unit==='Stück'?'Stück':'Portion'}. Abgewählte Bestandteile zählen nicht mit.</div></details>`}
 function sheetAmount(){
   const a=UI.amt; const f=a.unitMode==='g'?a.amt/100:a.amt; const n=a.per.map(v=>v*f);
   const quick=a.unitMode==='p'?[['½',0.5],['1',1],['1½',1.5],['2',2],['3',3]]:[...a.portions.map(p=>[p[0]+' ('+p[1]+' g)',p[1]]),['100 g',100]];
   openSheet(`<div class="stack"><div><div class="label">${MEALS.find(m=>m[0]===UI.meal)[1]} · ${fmtDate(UI.date)}</div><h2 style="margin-top:4px">${esc(a.name)}</h2></div>
    ${a.est&&a.est.length?`<details class="note"><summary>Vitamine und Mineralstoffe sind aus den Zutaten geschätzt (mit Spanne)</summary>${a.rng?`<div class="tiny" style="margin-top:6px">${MICRO.filter((k,j)=>a.rng[1][j]>0).slice(0,15).map(k=>{const j=MICRO.indexOf(k), q=a.unitMode==='g'?a.amt/100:a.amt; return `${NI[k][0]}: ${fmt(a.rng[0][j]*q)}–${fmt(a.rng[1][j]*q)} ${NI[k][1]}`}).join(' · ')}</div>`:''}<div class="tiny" style="margin-top:6px">${a.est.map(esc).join('<br>')}</div></details>`:''}
+   ${partsHtml(a)}
    <div class="row"><input id="amt" type="number" inputmode="decimal" min="0" step="any" value="${a.amt}" style="max-width:130px" aria-label="Menge"><span class="muted">${a.unitMode==='g'?'Gramm':a.unit==='Stück'?'Stück':'Portionen'}</span></div>
    <div class="row wrapr">${quick.map(q=>`<button class="sm" data-act="quick" data-v="${q[1]}">${esc(q[0])}</button>`).join('')}</div>
    <div class="row"><label for="amtTime" class="small muted" style="white-space:nowrap">Gegessen um</label><input id="amtTime" type="time" value="${a.time||(UI.date===today()?nowHM():MEALTIME[UI.meal])}" style="max-width:130px"></div>
@@ -1461,6 +1477,11 @@ function sheetAmount(){
    ${a.noMicro?'<div class="tiny muted" style="margin-top:6px">Für dieses Produkt sind keine Vitamine und Mineralstoffe hinterlegt.</div>':''}</div>
    <button class="primary" data-act="addentry">Eintragen</button><button data-act="close">Abbrechen</button></div>`);
   const ti=document.getElementById('amtTime'); ti.addEventListener('input',()=>{a.time=ti.value});
+  const pd=document.getElementById('amtParts'); if(pd)pd.addEventListener('toggle',()=>{a.showParts=pd.open});
+  document.querySelectorAll('[data-omit]').forEach(cb=>cb.addEventListener('change',()=>{const r=getRecipe(a.ref), g=recipeGroups(r)[+cb.dataset.omit]; const o=new Set(a.omit||[]);
+    if(cb.checked)g.ix.forEach(i=>o.delete(i)); else g.ix.forEach(i=>o.add(i));
+    if(o.size>=r.ing.length){cb.checked=true; toast('Mindestens ein Bestandteil muss bleiben.'); return}
+    a.omit=[...o].sort((x,y)=>x-y); a.showParts=true; amtRecalc(a); sheetAmount()}));
   const inp=document.getElementById('amt'); inp.addEventListener('input',()=>{a.amt=parseFloat(String(inp.value).replace(',','.'))||0; const ff=a.unitMode==='g'?a.amt/100:a.amt; const nn=a.per.map(v=>v*ff); document.getElementById('amtK').textContent=Math.round(nn[0])+' kcal'; document.getElementById('amtM').textContent=`E ${fmt(nn[1])} g · K ${fmt(nn[2])} g · F ${fmt(nn[4])} g`});
 }
 function addEntry(){
