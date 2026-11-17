@@ -2,13 +2,15 @@
 
 Die Erweiterung `custom_components/tellerflamme` macht Home Assistant zur gemeinsamen Ablage für die Tellerflamme-App:
 
-- **Abgleich zwischen Geräten:** Tagebuch, Vorrat, eigene Lebensmittel, Rezepte, Körperwerte und Ziele. Jeder Eintrag hat eine eigene ID, deshalb gibt es keine doppelten Einträge. Was offline eingetragen wird, kommt beim nächsten Abgleich nach. Gelöschtes wird auf allen Geräten gelöscht.
+- **Abgleich zwischen Geräten:** Tagebuch, Läufe, Vorrat, eigene Lebensmittel, Rezepte, Körperwerte und Ziele. Jeder Eintrag hat eine eigene ID, deshalb gibt es keine doppelten Einträge. Was offline eingetragen wird, kommt beim nächsten Abgleich nach. Gelöschtes wird auf allen Geräten gelöscht.
+- **Wie oft:** Standard ist 3× am Tag (7, 13 und 20 Uhr), einstellbar in der App unter *Ziele → Home Assistant* auf 2× am Tag (8 und 20 Uhr) oder „sofort bei jeder Änderung“. Ist die App zur Abgleichzeit zu, gleicht sie beim nächsten Öffnen ab. „Jetzt abgleichen“ geht immer. Bei Konflikten gewinnt die Änderung, die zuletzt gemacht wurde, nicht der letzte Abgleich.
 - **Vorrat** als To-do-Liste `todo.tellerflamme_vorrat`: offen = da, Beschreibung „fast leer“ = fast leer, abgehakt = leer.
 - **Einkaufsliste** `todo.tellerflamme_einkauf`: alles, was leer oder fast leer ist. Abhaken heißt gekauft, dann steht es im Vorrat wieder auf „da“.
 - **Sensoren** (die Werte liefert die App bei jedem Abgleich):
   - `sensor.tellerflamme_rezeptvorschlag`: bestes Rezept aus dem Vorrat. In den Attributen stehen bis zu 5 Rezepte mit fehlenden Zutaten und den Nährstoffen, gegen die sie helfen, außerdem Lebensmittel aus dem Vorrat gegen die Lücken.
   - `sensor.tellerflamme_vitaminluecken`: die drei Nährstoffe mit der größten Lücke (Schnitt der letzten 7 Tage).
-  - `sensor.tellerflamme_kalorien_heute`, `sensor.tellerflamme_streak`, `sensor.tellerflamme_vorrat_anzahl`
+  - `sensor.tellerflamme_laufen_woche` (ab 1.2): gelaufene km der letzten 7 Tage. Attribute: Anzahl Läufe, Minuten und kcal (7 Tage und heute) und der letzte Lauf mit Tempo.
+  - `sensor.tellerflamme_kalorien_heute` (das Ziel im Attribut `ziel` enthält die Läufe), `sensor.tellerflamme_streak`, `sensor.tellerflamme_vorrat_anzahl`
 - **Aktionen:** `tellerflamme.vorrat_setzen` (name, status: da / wenig / leer) und `tellerflamme.vorrat_entfernen` (name).
 
 ## Mehrere Personen

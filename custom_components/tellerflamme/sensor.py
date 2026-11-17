@@ -1,4 +1,4 @@
-"""Sensoren pro Person: Vorrat, Rezeptvorschlag, Kalorien, Streak und Vitaminlücken (die App liefert die Werte)."""
+"""Sensoren pro Person: Vorrat, Rezeptvorschlag, Kalorien, Streak, Vitaminlücken und Laufen (die App liefert die Werte)."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from .entity import PersonEntity, setup_per_person
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEntitiesCallback) -> None:
-    await setup_per_person(hass, entry, add, (VorratSensor, VorschlagSensor, KalorienSensor, StreakSensor, LueckenSensor))
+    await setup_per_person(hass, entry, add, (VorratSensor, VorschlagSensor, KalorienSensor, StreakSensor, LueckenSensor, LaufenSensor))
 
 
 class _Base(PersonEntity, SensorEntity):
@@ -102,3 +102,33 @@ class LueckenSensor(_Base):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         return {"naehrstoffe": self.status.get("gaps") or [], "zeitraum": self.status.get("gapDays"), **self._stamp}
+
+
+class LaufenSensor(_Base):
+    """Gelaufene Kilometer in den letzten 7 Tagen (heute eingeschlossen), mit dem letzten Lauf als Attribut."""
+
+    _key = "laufen_woche"
+    _attr_icon = "mdi:run"
+    _attr_native_unit_of_measurement = "km"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_suggested_display_precision = 1
+
+    @property
+    def native_value(self) -> float | None:
+        w = self.status.get("runWeek")
+        return w.get("km") if isinstance(w, dict) else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        w = self.status.get("runWeek") or {}
+        t = self.status.get("runToday") or {}
+        return {
+            "laeufe_7_tage": w.get("count"),
+            "minuten_7_tage": w.get("min"),
+            "kcal_7_tage": w.get("kcal"),
+            "km_heute": t.get("km"),
+            "minuten_heute": t.get("min"),
+            "kcal_heute": t.get("kcal"),
+            "letzter_lauf": self.status.get("lastRun"),
+            **self._stamp,
+        }
