@@ -34,6 +34,9 @@
       },
       "vitaminluecken": {
         "name": "Vitaminlücken"
+      },
+      "laufen_woche": {
+        "name": "Laufen (7 Tage)"
       }
     }
   },

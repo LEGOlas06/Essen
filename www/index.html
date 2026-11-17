@@ -410,7 +410,7 @@ const MEALS=[['b','Frühstück'],['l','Mittag'],['d','Abend'],['s','Snacks']];
 const MILES=[3,7,14,30,50,100,200,365];
 
 /* ---------- Zustand & Speicher ---------- */
-const DEF_SETTINGS={kcal:2200,prot:100,carb:260,fat:75,fib:30,sex:'m',age:'',height:'',weight:'',pal:1.4,goal:'keep',rate:0.5,strength:false,useBurn:false,burnFactor:0.7,fdcKey:'',waterGoal:2500};
+const DEF_SETTINGS={kcal:2200,prot:100,carb:260,fat:75,fib:30,sex:'m',age:'',height:'',weight:'',pal:1.4,goal:'keep',rate:0.5,strength:false,useBurn:false,burnFactor:0.7,runAdd:true,fdcKey:'',waterGoal:2500};
 let S={settings:{...DEF_SETTINGS},foods:{},recipes:{},days:{},body:{},vorrat:{}};
 let UI={tab:'heute',date:today(),meal:guessMeal(),q:'',range:30,online:[],usda:[],onlineState:'',usdaState:'',scanning:false};
 const LS='tellerflamme.v1';
@@ -690,7 +690,39 @@ function getFood(id){ if(id===SUPP.id)return SUPP.food; if(id&&id.startsWith('ff
 function allRecipes(){return [...R0,...Object.values(S.recipes)]}
 function getRecipe(id){return R0.find(r=>r.id===id)||S.recipes[id]||null}
 function recipeCalc(r){const tot=zero();let g=0,missing=[]; const gap=EXT.map(()=>0); for(const [fid,gr] of r.ing){const f=getFood(fid); if(!f){missing.push(fid);continue} addTo(tot,f.per,gr/100); g+=gr; EXT.forEach((k,j)=>{if(f.per[NK_CORE+j]==null)gap[j]+=gr})} EXT.forEach((k,j)=>{if(g&&gap[j]>g*0.15)tot[NK_CORE+j]=null}); const per=tot.map(v=>v==null?null:v/r.yield); return {tot,per,grams:g/r.yield,missing}}
-function dayGoal(d){const b=S.body[d]; return Math.round(S.settings.kcal+(S.settings.useBurn&&b&&b.burn?b.burn*S.settings.burnFactor:0))}
+/* Laufen: S.body[d].runs = [{id,t,km,min,kcal,src:'hc'|'sh'|'hand'}]. hc/sh kommen aus Health Connect bzw. Samsung Health
+   und stecken dort schon in den Aktivkalorien des Tages; von Hand eingetragene Läufe kommen obendrauf. */
+function dayRuns(d){const b=S.body[d]; return b&&Array.isArray(b.runs)?b.runs:[]}
+function runSum(rs){return rs.reduce((a,r)=>({km:a.km+(+r.km||0),min:a.min+(+r.min||0),kcal:a.kcal+(+r.kcal||0),n:a.n+1}),{km:0,min:0,kcal:0,n:0})}
+function dayBurn(d){const b=S.body[d]||{}, rs=dayRuns(d), tr=runSum(rs.filter(r=>r.src!=='hand')).kcal, hr=runSum(rs.filter(r=>r.src==='hand')).kcal;
+  return Math.round(Math.max(b.burn||0,tr)+hr)}
+function dayGoal(d){const g=S.settings; let add=0;
+  if(g.useBurn)add=dayBurn(d)*g.burnFactor; else if(g.runAdd!==false)add=runSum(dayRuns(d)).kcal*g.burnFactor;
+  return Math.round(g.kcal+add)}
+function runKcalEst(km,min){const w=+S.settings.weight||75; return Math.round(km>0?km*w*1.0:min*w*0.15)}
+function runPace(r){if(!(r.km>0&&r.min>0))return ''; const p=r.min/r.km, m=Math.floor(p), s=Math.round((p-m)*60); return (s===60?(m+1)+':00':m+':'+String(s).padStart(2,'0'))+' /km'}
+function km1(x){return (Math.round((+x||0)*10)/10).toLocaleString('de-DE',{minimumFractionDigits:1,maximumFractionDigits:1})}
+function runWeek(d){let rs=[]; for(let i=0;i<7;i++)rs=rs.concat(dayRuns(addDays(d,-i))); return runSum(rs)}
+function runsBlock(d){const rs=dayRuns(d).slice().sort((a,b)=>(a.t||0)-(b.t||0)), w=runWeek(d), g=S.settings, H=nativeHealth();
+  const src={hc:'Health Connect',sh:'Samsung Health',hand:'von Hand'};
+  const rows=rs.map(r=>`<div class="row" style="justify-content:space-between;gap:8px"><div class="stack" style="gap:0"><b>${km1(r.km)} km · ${Math.round(r.min||0)} min${runPace(r)?' · '+runPace(r):''}</b><span class="tiny muted">${r.t?new Date(r.t).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr · ':''}${src[r.src]||''}</span></div><div class="row" style="gap:6px"><b class="num">${Math.round(r.kcal||0)}</b><span class="tiny muted">kcal</span>${r.src==='hand'?`<button class="ghost sm" data-act="rundel" data-id="${esc(r.id)}" aria-label="Lauf löschen">✕</button>`:''}</div></div>`).join('');
+  const note=g.useBurn||g.runAdd!==false?`<div class="tiny muted">Läufe erhöhen dein Tagesziel um ${Math.round(g.burnFactor*100)} % ihrer kcal${g.useBurn?' (Läufe aus Health Connect stecken schon in den Aktivkalorien)':''}.</div>`:'';
+  return `<div class="row" style="justify-content:space-between"><b>Laufen</b><span class="tiny muted">7 Tage: ${w.n} ${w.n===1?'Lauf':'Läufe'} · ${km1(w.km)} km</span></div>
+   ${rows||'<div class="tiny muted">Heute noch kein Lauf.</div>'}${rs.length?note:''}
+   <div class="row wrapr"><button class="sm" data-act="runadd">+ Lauf eintragen</button>${H&&!g.hcRuns?'<button class="sm" data-act="hcruns">Läufe aus Health Connect holen</button>':''}</div>`}
+function sheetRun(){const now=new Date(), d=UI.date, hm=d===today()?String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0'):'18:00';
+  openSheet(`<div class="stack"><h2>Lauf eintragen</h2><div class="small muted">${fmtDate(d)}. Die kcal schätzt die App aus Strecke und Gewicht (etwa 1 kcal je kg und km), wenn du sie leer lässt.</div>
+  <div class="grid2"><div class="field"><label for="run-km">Strecke (km)</label><input id="run-km" type="number" inputmode="decimal" step="0.01" min="0" placeholder="z. B. 5"></div>
+  <div class="field"><label for="run-min">Dauer (min)</label><input id="run-min" type="number" inputmode="numeric" min="0" placeholder="z. B. 30"></div>
+  <div class="field"><label for="run-kcal">Verbrannt (kcal, optional)</label><input id="run-kcal" type="number" inputmode="numeric" min="0" placeholder="automatisch"></div>
+  <div class="field"><label for="run-time">Uhrzeit</label><input id="run-time" type="time" value="${hm}"></div></div>
+  <button class="primary" data-act="runsave">Speichern</button><button data-act="close">Abbrechen</button></div>`)}
+function saveRun(){const v=id=>parseFloat(String(document.getElementById(id).value).replace(',','.'));
+  const km=v('run-km'), min=v('run-min'); let kcal=v('run-kcal'); if(!(km>0)&&!(min>0)){toast('Bitte Strecke oder Dauer eintragen.');return}
+  if(!(kcal>=0))kcal=runKcalEst(km>0?km:0,min>0?min:0);
+  const [hh,mm]=(document.getElementById('run-time').value||'18:00').split(':').map(Number); const t=new Date(UI.date+'T00:00:00'); t.setHours(hh||0,mm||0,0,0);
+  const b=S.body[UI.date]=S.body[UI.date]||{}; b.runs=(b.runs||[]).concat([{id:'h'+uid(),t:t.getTime(),km:km>0?Math.round(km*100)/100:0,min:min>0?Math.round(min):0,kcal:Math.round(kcal),src:'hand'}]);
+  Store.saveMeta(); closeSheet(); render(); toast('Lauf gespeichert')}
 function dayTotals(d){const t=zero();(S.days[d]||[]).forEach(e=>addTo(t,e.n));return t}
 
 /* ---------- Streak ---------- */
@@ -799,7 +831,7 @@ function vHeute(si){
   const rr={hasR,rl,rh}; const grp=(title,keys,open)=>`<details class="card nut"${open?' open':''}><summary><h2>${title}</h2><span class="tiny muted" style="white-space:nowrap">% vom Bedarf</span></summary><div class="micro" style="margin-top:10px">${nutriRows(keys,t,entries,ref,rr)}</div></details>`;
   const hasOFFnoMicro=entries.some(e=>e.noMicro);
   const [mood,tip]=flameTip(d,t,goal,si,entries);
-  const burn=bd.burn||0;
+  const burn=dayBurn(d);
   /* Wasser */
   const w=bd.water||0, wg=drinkGoal(d), ng=Math.max(4,Math.ceil(wg/250)), fw=S.settings.waterFood===false?0:foodWater(d);
   const glasses=Array.from({length:ng},(_,i)=>`<button class="glass" data-act="glass" data-i="${i}" aria-label="${(i+1)*250} ml">${GLASS((i+1)*250<=w)}${i===Math.floor(w/250)?'<span class="gplus">+</span>':''}</button>`).join('');
@@ -824,6 +856,7 @@ function vHeute(si){
   <h2 class="sec">Aktivität</h2>
   <section class="card stack" style="gap:10px">
    <div class="hc"><div><span class="tiny muted">Schritte</span><b>${bd.steps!=null?bd.steps.toLocaleString('de-DE'):'–'}</b></div><div><span class="tiny muted">Aktiv</span><b>${bd.burn!=null?bd.burn:'–'}</b><span class="tiny muted">kcal</span></div><div><span class="tiny muted">Gewicht</span><b>${bd.w!=null?fmt(bd.w):'–'}</b><span class="tiny muted">kg</span></div></div>
+   ${runsBlock(d)}
    <details><summary class="small">${nativeHealth()?'Health Connect & von Hand':'Von Hand eintragen'}</summary><div class="grid2" style="margin-top:8px">${bodyInputs(bd)}</div>${nativeHealth()?`<button class="sm" data-act="hc" style="margin-top:8px">${g.hcSync?'Aktualisieren':'Mit Health Connect verbinden'}</button>`:''}${g.useBurn?'':'<div class="tiny muted" style="margin-top:6px">Aktivkalorien zählen erst zum Ziel, wenn du das unter „Ziele“ einschaltest.</div>'}</details>
   </section>
   ${entries.length?`<h2 class="sec">Nährstoffe</h2>
@@ -2007,8 +2040,8 @@ const dec=v=>v==null||isNaN(v)?'':String(Math.round(v*100)/100).replace('.',',')
 function csvCell(s){s=String(s??'');return /[;"\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s}
 function csvEntries(){const head=['Datum','Uhrzeit','Mahlzeit','Lebensmittel','Menge','Einheit',...NK.map(k=>NI[k][0]+' ('+NI[k][1]+')')];const rows=[head.join(';')];
   Object.keys(S.days).sort().forEach(d=>S.days[d].forEach(e=>rows.push([d,entryTime(e,d)||'',MEALS.find(m=>m[0]===e.meal)?.[1]||'',csvCell(e.name),dec(e.amt),e.unit,...NK.map((k,i)=>dec(e.n[i]))].join(';'))));return rows.join('\r\n')}
-function csvDays(){const head=['Datum','Einträge',...NK.map(k=>NI[k][0]+' ('+NI[k][1]+')'),'kcal-Ziel','Aktivkalorien','Schritte','Gewicht (kg)','Getrunken (ml)'];const rows=[head.join(';')];
-  Object.keys(S.days).sort().forEach(d=>{if(!S.days[d].length)return; rows.push([d,S.days[d].length,...dayTotals(d).map(dec),dayGoal(d),S.body[d]&&S.body[d].burn!=null?S.body[d].burn:'',S.body[d]&&S.body[d].steps!=null?S.body[d].steps:'',S.body[d]&&S.body[d].w?dec(S.body[d].w):'',S.body[d]&&S.body[d].water?S.body[d].water:''].join(';'))});return rows.join('\r\n')}
+function csvDays(){const head=['Datum','Einträge',...NK.map(k=>NI[k][0]+' ('+NI[k][1]+')'),'kcal-Ziel','Aktivkalorien','Schritte','Laufen (km)','Gewicht (kg)','Getrunken (ml)'];const rows=[head.join(';')];
+  Object.keys(S.days).sort().forEach(d=>{if(!S.days[d].length)return; rows.push([d,S.days[d].length,...dayTotals(d).map(dec),dayGoal(d),S.body[d]&&S.body[d].burn!=null?S.body[d].burn:'',S.body[d]&&S.body[d].steps!=null?S.body[d].steps:'',dayRuns(d).length?dec(runSum(dayRuns(d)).km):'',S.body[d]&&S.body[d].w?dec(S.body[d].w):'',S.body[d]&&S.body[d].water?S.body[d].water:''].join(';'))});return rows.join('\r\n')}
 /* Notlösung, wenn die App-Version noch kein Speichern/Teilen kann: Inhalt zum Kopieren anzeigen */
 let copyBuf='';
 function copyFallback(name,text,why){copyBuf=text; openSheet(`<div class="stack"><h2>${esc(name)}</h2><div class="small muted">${esc(why)} Tippe auf „Alles kopieren“ und füge den Text zum Beispiel in eine Notiz, eine Mail an dich selbst oder in den Claude-Chat ein.</div><button class="primary" data-act="copybuf">Alles kopieren</button><textarea readonly style="width:100%;height:160px;font-size:11px">${esc(text.length>20000?text.slice(0,20000)+'\n… (gekürzt, „Alles kopieren“ nimmt alles)':text)}</textarea><button data-act="close">Schließen</button></div>`)}
@@ -2030,7 +2063,7 @@ function summaryText(){
   const si=streakInfo();
   let s=`Meine Ernährungsdaten aus Tellerflamme (letzte 30 Tage, ${days.length} Tage mit Einträgen). Bitte werte sie aus und gib mir konkrete Tipps.\nZiele: ${g.kcal} kcal, ${g.prot} g Eiweiß, ${g.carb} g KH, ${g.fat} g Fett, ${g.fib} g Ballaststoffe. Streak: ${si.cur} Tage (bester ${si.best}).\nProfil: ${g.age||'?'} Jahre, ${g.height||'?'} cm, ${g.weight||'?'} kg, Ziel: ${g.goal==='lose'?'abnehmen':g.goal==='gain'?'Muskeln aufbauen':'halten'}${g.strength?', Krafttraining':''}.\n\nDurchschnitt pro Tag:\n`;
   NK.forEach(k=>{s+=`- ${NI[k][0]}: ${fmt(avg[IDX[k]],k)} ${NI[k][1]}${ref[k]?` (${Math.round(avg[IDX[k]]/ref[k]*100)} % vom Bedarf)`:''}\n`});
-  s+='\nTage:\n'; days.slice(-14).forEach(d=>{const t=dayTotals(d); const b=S.body[d]||{}; s+=`${d}: ${Math.round(t[0])} kcal${b.burn?' (aktiv verbrannt '+b.burn+')':''}${b.steps?' ['+b.steps+' Schritte]':''}${b.water?' ['+b.water+' ml getrunken]':''}${b.w?' [Gewicht '+fmt(b.w)+' kg]':''}, E ${fmt(t[1])} g, K ${fmt(t[2])} g, F ${fmt(t[4])} g – ${S.days[d].map(e=>(entryTime(e,d)?entryTime(e,d)+' ':'')+e.name+' '+fmt(e.amt)+' '+e.unit).join(', ')}\n`});
+  s+='\nTage:\n'; days.slice(-14).forEach(d=>{const t=dayTotals(d); const b=S.body[d]||{}; s+=`${d}: ${Math.round(t[0])} kcal${b.burn?' (aktiv verbrannt '+b.burn+')':''}${b.steps?' ['+b.steps+' Schritte]':''}${dayRuns(d).length?' [gelaufen '+km1(runSum(dayRuns(d)).km)+' km, '+runSum(dayRuns(d)).kcal+' kcal]':''}${b.water?' ['+b.water+' ml getrunken]':''}${b.w?' [Gewicht '+fmt(b.w)+' kg]':''}, E ${fmt(t[1])} g, K ${fmt(t[2])} g, F ${fmt(t[4])} g – ${S.days[d].map(e=>(entryTime(e,d)?entryTime(e,d)+' ':'')+e.name+' '+fmt(e.amt)+' '+e.unit).join(', ')}\n`});
   return s;
 }
 async function copySummary(){const t=summaryText(); try{await navigator.clipboard.writeText(t);toast('Kopiert. Jetzt im Chat einfügen.')}catch(e){openSheet(`<div class="stack"><h2>Zusammenfassung</h2><div class="small muted">Kopieren klappt hier nicht automatisch. Markiere den Text und kopiere ihn.</div><textarea rows="12" id="sumtxt" readonly>${esc(t)}</textarea><button data-act="close">Schließen</button></div>`);setTimeout(()=>document.getElementById('sumtxt')?.select(),50)}}
@@ -2075,16 +2108,33 @@ function parseHealthCSV(text,name){
     if(isW&&wi>=0){const w=parseFloat(String(c[wi]).replace(',','.')); if(w>20&&w<400)res.w[d]=Math.round(w*10)/10}
     else if(ci>=0){const k=parseFloat(String(c[ci]).replace(',','.')); if(k>=0&&k<10000)res.burn[d]=Math.max(res.burn[d]||0,Math.round(k))}}
   return res}
+/* Samsung-Health-Trainings (com.samsung.shealth.exercise.*.csv): Typ 1002 = Laufen, 1001… sind andere Sportarten. Zeiten stehen in UTC, time_offset z. B. UTC+0100 */
+function parseExerciseCSV(text){let lines=text.split(/\r?\n/).filter(l=>l.trim()); const out=[]; if(lines.length<2)return out;
+  const sep=lines[1].split(';').length>lines[1].split(',').length?';':',';
+  if(/^com\.samsung/i.test(lines[0])&&lines[0].split(sep).length<6)lines=lines.slice(1);
+  const head=splitCSV(lines[0],sep).map(h=>h.trim().toLowerCase().replace(/^com\.samsung\.health\.exercise\./,''));
+  const ix=n=>head.indexOf(n); const iT=ix('exercise_type'),iS=ix('start_time'),iD=ix('duration'),iK=ix('distance'),iC=ix('calorie'),iO=ix('time_offset'),iU=ix('datauuid');
+  if(iT<0||iS<0)return out;
+  for(const l of lines.slice(1)){const c=splitCSV(l,sep); if(String(c[iT]).trim()!=='1002')continue;
+    const m=String(c[iS]||'').match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/); if(!m)continue;
+    const tu=Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5]); const off=String(c[iO]||'').match(/UTC([+-])(\d{2})(\d{2})/);
+    const loc=new Date(tu+(off?(off[1]==='-'?-1:1)*(+off[2]*60+ +off[3])*60000:0)), day=off?loc.getUTCFullYear()+'-'+String(loc.getUTCMonth()+1).padStart(2,'0')+'-'+String(loc.getUTCDate()).padStart(2,'0'):ymd(new Date(tu));
+    const num=i=>i>=0?parseFloat(String(c[i]).replace(',','.'))||0:0;
+    out.push({id:'sh'+(iU>=0&&c[iU]?c[iU]:tu),t:tu,day,km:Math.round(num(iK)/10)/100,min:Math.round(num(iD)/60000),kcal:Math.round(num(iC)),src:'sh'})}
+  return out}
 async function importHealth(files){
-  const all={burn:{},w:{}}; const merge=r=>{Object.assign(all.w,r.w);for(const d in r.burn)all.burn[d]=Math.max(all.burn[d]||0,r.burn[d])};
+  const all={burn:{},w:{},runs:[]}; const merge=r=>{Object.assign(all.w,r.w);for(const d in r.burn)all.burn[d]=Math.max(all.burn[d]||0,r.burn[d])};
   try{for(const f of files){
     if(/\.zip$/i.test(f.name)){await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js'); const z=await JSZip.loadAsync(f);
-      for(const n of Object.keys(z.files)){if(/\.csv$/i.test(n)&&/(day_summary|weight|calorie|kalorie|gewicht)/i.test(n))merge(parseHealthCSV(await z.files[n].async('string'),n))}}
+      for(const n of Object.keys(z.files)){if(/\.exercise\.(\d+\.)?csv$/i.test(n))all.runs.push(...parseExerciseCSV(await z.files[n].async('string')));
+        else if(/\.csv$/i.test(n)&&/(day_summary|weight|calorie|kalorie|gewicht)/i.test(n))merge(parseHealthCSV(await z.files[n].async('string'),n))}}
+    else if(/\.exercise\.(\d+\.)?csv$/i.test(f.name))all.runs.push(...parseExerciseCSV(await f.text()));
     else merge(parseHealthCSV(await f.text(),f.name))}
-    const nb=Object.keys(all.burn).length, nw=Object.keys(all.w).length;
-    if(!nb&&!nw){toast('In der Datei wurden keine Kalorien- oder Gewichtsdaten erkannt.');return}
+    const nb=Object.keys(all.burn).length, nw=Object.keys(all.w).length, nr=all.runs.length;
+    if(!nb&&!nw&&!nr){toast('In der Datei wurden keine Kalorien-, Gewichts- oder Laufdaten erkannt.');return}
     for(const d in all.burn)(S.body[d]=S.body[d]||{}).burn=all.burn[d]; for(const d in all.w)(S.body[d]=S.body[d]||{}).w=all.w[d];
-    await Store.saveMeta(); toast(`Importiert: ${nb} Tage Verbrauch, ${nw} Gewichtswerte`); render();
+    all.runs.forEach(r=>{const {day,...x}=r; const b=(S.body[day]=S.body[day]||{}); b.runs=(b.runs||[]).filter(o=>o.id!==x.id).concat([x]).sort((a,c)=>(a.t||0)-(c.t||0))});
+    await Store.saveMeta(); toast(`Importiert: ${nb} Tage Verbrauch, ${nw} Gewichtswerte, ${nr} Läufe`); render();
   }catch(e){toast('Import fehlgeschlagen. Ist es eine CSV- oder ZIP-Datei aus Samsung Health?')}
 }
 
@@ -2094,7 +2144,7 @@ let hcBusy=false;
 async function syncHealth(interactive){
   const H=nativeHealth(); if(!H||hcBusy)return; hcBusy=true;
   try{const av=await H.isHealthAvailable(); if(!av.available){if(interactive){toast('Health Connect ist nicht installiert.');try{await H.showHealthConnectInPlayStore()}catch(e){}}return}
-    if(interactive)await H.requestHealthPermissions({permissions:['READ_ACTIVE_CALORIES','READ_STEPS','READ_WEIGHT']});
+    if(interactive)await H.requestHealthPermissions({permissions:['READ_ACTIVE_CALORIES','READ_STEPS','READ_WEIGHT','READ_WORKOUTS','READ_DISTANCE']});
     const end=new Date(), start=new Date(); start.setDate(start.getDate()-29); start.setHours(0,0,0,0);
     const {aggregatedData}=await H.queryAggregated({startDate:start.toISOString(),endDate:end.toISOString(),dataType:'active-calories',bucket:'day'});
     (aggregatedData||[]).forEach(x=>{const d=ymd(new Date(x.startDate)); if(x.value>0){const b=(S.body[d]=S.body[d]||{}); b.burn=Math.round(x.value); b.hc=1}});
@@ -2109,6 +2159,13 @@ async function syncHealth(interactive){
     try{const {records}=await H.queryRecords({startDate:start.toISOString(),endDate:end.toISOString(),dataType:'weight'});
       (records||[]).forEach(r=>{const d=ymd(new Date(r.startDate)); const b=(S.body[d]=S.body[d]||{}); b.w=Math.round(r.value*10)/10; b.hc=1});
       const last=(records||[]).slice(-1)[0]; if(last)S.settings.weight=Math.round(last.value*10)/10}catch(e){}
+    /* Läufe (Trainings vom Typ Laufen/Laufband) der letzten 30 Tage */
+    try{const {workouts}=await H.queryWorkouts({startDate:start.toISOString(),endDate:end.toISOString(),includeHeartRate:false,includeRoute:false,includeSteps:false});
+      const by={}; (workouts||[]).filter(x=>/^running/i.test(String(x.workoutType||''))).forEach(x=>{const t=new Date(x.startDate), d=ymd(t);
+        (by[d]=by[d]||[]).push({id:'hc'+(x.id||t.getTime()),t:t.getTime(),km:Math.round((x.distance||0)/10)/100,min:Math.round((x.duration||0)/60),kcal:Math.round(x.calories||0),src:'hc'})});
+      for(let i=0;i<30;i++){const d=addDays(today(),-i), b=S.body[d]; const old=b&&b.runs?b.runs.filter(r=>r.src!=='hc'):[]; const nw=old.concat(by[d]||[]);
+        if(nw.length){const bb=(S.body[d]=S.body[d]||{}); bb.runs=nw.sort((a,c)=>(a.t||0)-(c.t||0))} else if(b&&b.runs){delete b.runs; if(!Object.keys(b).length)delete S.body[d]}}
+      if(interactive)S.settings.hcRuns=1}catch(e){if(interactive)console.warn('Läufe:',e)}
     if(interactive&&!S.settings.hcSync)S.settings.useBurn=true;
     S.settings.hcSync=true; S.settings.hcLast=Date.now(); await Store.saveMeta(); render(); if(interactive)toast('Health Connect synchronisiert');
   }catch(e){if(interactive)toast('Health Connect: '+(e&&e.message||'Zugriff nicht erlaubt'))}
@@ -2140,7 +2197,7 @@ function vMehr(){const g=S.settings;
    <div class="field"><label for="g-sex">Geschlecht (für Formel und Vitamin-Referenzen)</label><select id="g-sex"><option value="m" ${g.sex==='m'?'selected':''}>Männlich</option><option value="w" ${g.sex==='w'?'selected':''}>Weiblich</option></select></div>
    <label class="row small"><input type="checkbox" id="p-useBurn" style="width:auto" ${g.useBurn?'checked':''}> Aktivkalorien von Uhr/Handy täglich anrechnen</label>
    <div class="field" ${g.useBurn?'hidden':''}><label for="p-pal">Alltag (Aktivitätslevel)</label><select id="p-pal">${PALS.map(([v,l])=>`<option value="${v}" ${+g.pal===v?'selected':''}>${l} (PAL ${String(v).replace('.',',')})</option>`).join('')}</select></div>
-   ${g.useBurn?'<div class="tiny muted">Grundbedarf wird mit PAL 1,3 gerechnet. Deine Aktivkalorien kommen jeden Tag zu 70 % dazu, weil Fitnessuhren den Verbrauch in Studien oft deutlich überschätzen.</div>':''}
+   ${g.useBurn?'<div class="tiny muted">Grundbedarf wird mit PAL 1,3 gerechnet. Deine Aktivkalorien kommen jeden Tag zu 70 % dazu, weil Fitnessuhren den Verbrauch in Studien oft deutlich überschätzen. Läufe sind darin enthalten.</div>':`<label class="row small"><input type="checkbox" id="g-runAdd" style="width:auto" ${g.runAdd!==false?'checked':''}> Läufe zusätzlich anrechnen (70 % der verbrannten kcal kommen an Lauftagen zum Ziel dazu). Ausschalten, wenn dein Aktivitätslevel das Laufen schon enthält.</label>`}
    <div class="grid2"><div class="field"><label for="p-goal">Ziel</label><select id="p-goal"><option value="lose" ${g.goal==='lose'?'selected':''}>Abnehmen</option><option value="keep" ${g.goal==='keep'?'selected':''}>Gewicht halten</option><option value="gain" ${g.goal==='gain'?'selected':''}>Muskeln aufbauen</option></select></div>
    <div class="field" ${g.goal==='keep'?'hidden':''}><label for="p-rate">Tempo pro Woche</label><select id="p-rate">${(g.goal==='gain'?[0.1,0.25]:[0.25,0.5,0.75]).map(v=>`<option value="${v}" ${+g.rate===v?'selected':''}>${String(v).replace('.',',')} kg</option>`).join('')}</select></div></div>
    <label class="row small"><input type="checkbox" id="p-strength" style="width:auto" ${g.strength?'checked':''}> Ich mache regelmäßig Krafttraining</label>
@@ -2154,10 +2211,10 @@ function vMehr(){const g=S.settings;
   ${appCard()}
   ${haCard()}
   <section class="card stack" style="gap:8px"><h3>So funktioniert der Streak</h3><div class="small">Jeder Tag mit mindestens einem Eintrag zählt. Nach je 7 Tagen am Stück bekommst du einen Freeze (höchstens 2). Verpasst du einen Tag, springt automatisch ein Freeze ein und dein Streak bleibt. Abzeichen gibt es bei 3, 7, 14, 30, 50, 100, 200 und 365 Tagen.</div></section>
-  ${nativeHealth()?`<section class="card stack" style="gap:8px"><h3>Samsung Health live</h3><div class="small">Über Health Connect holt die App deine Aktivkalorien und dein Gewicht automatisch, jedes Mal wenn du sie öffnest. In Samsung Health muss dafür unter Einstellungen → Health Connect das Teilen eingeschaltet sein.</div>
+  ${nativeHealth()?`<section class="card stack" style="gap:8px"><h3>Samsung Health live</h3><div class="small">Über Health Connect holt die App deine Aktivkalorien, dein Gewicht und deine Läufe automatisch, jedes Mal wenn du sie öffnest. In Samsung Health muss dafür unter Einstellungen → Health Connect das Teilen eingeschaltet sein.</div>
    <button class="primary" data-act="hc">${g.hcSync?'Jetzt synchronisieren':'Mit Health Connect verbinden'}</button>${g.hcLast?`<div class="tiny muted">Zuletzt: ${new Date(g.hcLast).toLocaleString('de-DE')}</div>`:''}</section>`:''}
   <section class="card stack" style="gap:8px"><h3>Samsung Health importieren</h3>
-   <div class="small">Samsung Health und Health Connect lassen sich nicht direkt mit einer Web-App verbinden. So geht es trotzdem: In Samsung Health auf <b>Menü → Einstellungen → Persönliche Daten herunterladen</b> tippen. Die ZIP-Datei (oder einzelne CSV-Dateien daraus) hier laden. Erkannt werden Aktivkalorien pro Tag und Gewicht.</div>
+   <div class="small">Samsung Health und Health Connect lassen sich nicht direkt mit einer Web-App verbinden. So geht es trotzdem: In Samsung Health auf <b>Menü → Einstellungen → Persönliche Daten herunterladen</b> tippen. Die ZIP-Datei (oder einzelne CSV-Dateien daraus) hier laden. Erkannt werden Aktivkalorien pro Tag, Gewicht und Läufe.</div>
    <button data-act="health">ZIP oder CSV laden</button><div class="tiny muted">Experimentell. Live ohne Export geht es in der Android-App von Tellerflamme.</div></section>
   <section class="card stack" style="gap:8px"><h3>Quellen für den Rechner</h3><ul class="small muted" style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px">
    <li>Grundumsatz: Mifflin-St-Jeor-Formel (Mifflin et al., Am J Clin Nutr 1990). In einer Übersichtsarbeit die genaueste Standardformel (Frankenfield et al., J Am Diet Assoc 2005).</li>
@@ -2251,6 +2308,10 @@ document.addEventListener('click',async ev=>{
     case 'applyadaptive':{const k=+el.dataset.k; const m=macrosFor(k,S.settings); Object.assign(S.settings,{kcal:k,prot:m.prot,carb:m.carb,fat:m.fat,fib:m.fib}); Store.saveMeta(); render(); toast('Ziel angepasst: '+k+' kcal'); break}
     case 'savefdc':S.settings.fdcKey=document.getElementById('g-fdc').value.trim();Store.saveMeta();toast('Gespeichert');break;
     case 'hc':syncHealth(true);break;
+    case 'hcruns':syncHealth(true);break;
+    case 'runadd':sheetRun();break;
+    case 'runsave':saveRun();break;
+    case 'rundel':{const b=S.body[UI.date]; if(b&&b.runs){b.runs=b.runs.filter(r=>r.id!==el.dataset.id); if(!b.runs.length)delete b.runs; if(!Object.keys(b).length)delete S.body[UI.date]; Store.saveMeta(); render(); toast('Lauf gelöscht')} break}
     case 'health':document.getElementById('healthFile').click();break;
     case 'reset':UI.confirmReset=true;render();break;
     case 'reset-no':UI.confirmReset=false;render();break;
@@ -2272,6 +2333,7 @@ document.addEventListener('change',ev=>{const id=ev.target.id;
     if(id==='b-burn'){if(v>=0)b.burn=Math.round(v);else delete b.burn} else {if(v>0){b.w=Math.round(v*10)/10; if(UI.date===today())S.settings.weight=b.w}else delete b.w}
     if(!Object.keys(b).length)delete S.body[UI.date]; Store.saveMeta(); setTimeout(render,0); toast('Gespeichert')}
   else if(id==='g-waterFood'){S.settings.waterFood=ev.target.checked; Store.saveMeta(); setTimeout(render,0)}
+  else if(id==='g-runAdd'){S.settings.runAdd=ev.target.checked; Store.saveMeta(); setTimeout(render,0)}
   else if(id==='nt-on'){notifToggle(ev.target.checked)}
   else if(ev.target.dataset&&ev.target.dataset.ntc){S.settings.notif={...notifCfg(),[ev.target.dataset.ntc]:ev.target.checked}; Store.saveMeta(); notifSoon()}
   else if(ev.target.dataset&&ev.target.dataset.nt){S.settings.notif={...notifCfg(),[ev.target.dataset.nt]:ev.target.value}; Store.saveMeta(); notifSoon()}
@@ -2335,13 +2397,24 @@ function vAddItem(name,food){name=String(name||'').trim(); if(!name)return; S.vo
   UI.vq=''; vSave(); UI.vFocus=true; drawVorrat()}
 
 /* Home Assistant */
-const HA_LOCAL=['haUrl','haToken','haOn','hcSync','hcLast'];
+const HA_LOCAL=['haUrl','haToken','haOn','haPlan','hcSync','hcLast','hcRuns'];
 const HA_KEY='tellerflamme.ha';
 const HA={st:(()=>{try{return JSON.parse(localStorage.getItem(HA_KEY))||{}}catch(e){return {}}})(),busy:false,again:false,timer:null,applying:false};
 HA.st.sent=HA.st.sent||{}; HA.st.cursor=HA.st.cursor||0;
 function haSaveSt(){try{localStorage.setItem(HA_KEY,JSON.stringify(HA.st))}catch(e){}}
 function haNative(){try{return !!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform())}catch(e){return false}}
 function haDev(){if(!HA.st.dev){HA.st.dev=(haNative()?'App':'Browser')+'-'+uid().slice(0,4); haSaveSt()} return HA.st.dev}
+/* Abgleich nur zu festen Zeiten (Standard 3× am Tag). Ist die App dann zu, gleicht sie beim nächsten Öffnen ab. */
+const HA_PLANS={'3':[7,13,20],'2':[8,20]};
+function haPlan(){const p=S.settings.haPlan; return p==='live'||HA_PLANS[p]?p:'3'}
+function haSlot(){const p=HA_PLANS[haPlan()]; if(!p)return 0; const n=Date.now(); for(let back=0;back<2;back++){for(const h of p.slice().reverse()){const t=new Date(); t.setDate(t.getDate()-back); t.setHours(h,0,0,0); if(t.getTime()<=n)return t.getTime()}} return 0}
+function haNext(){const p=HA_PLANS[haPlan()]; if(!p)return null; const n=Date.now(); for(let fw=0;fw<2;fw++)for(const h of p){const t=new Date(); t.setDate(t.getDate()+fw); t.setHours(h,0,0,0); if(t.getTime()>n)return t} return null}
+function haDue(){if(haPlan()==='live')return true; const n=Date.now(); return (HA.st.last||0)<haSlot()&&n-(HA.st.tryAt||0)>15*60000}
+/* Merkt sich, wann ein Datensatz geändert wurde, damit beim seltenen Abgleich die wirklich neueste Änderung gewinnt */
+let haMarkT=null;
+function haMark(){clearTimeout(haMarkT); haMarkT=setTimeout(()=>{if(!haOn()||!HA.st.epoch)return; const R=haRecords(), sent=HA.st.sent, chg=HA.st.chg=HA.st.chg||{}, now=Date.now();
+  Object.entries(R).forEach(([k,v])=>{if(sent[k]!==haHash(v)){if(!chg[k])chg[k]=now} else delete chg[k]});
+  Object.keys(sent).forEach(k=>{if(!(k in R)&&!chg[k])chg[k]=now}); Object.keys(chg).forEach(k=>{if(!(k in R)&&!(k in sent))delete chg[k]}); haSaveSt()},2500)}
 function haOn(){const g=S.settings; return !!(g.haOn&&g.haUrl&&g.haToken)&&!(window.claude&&window.claude.use)}
 function stable(v){if(v===null||typeof v!=='object')return JSON.stringify(v===undefined?null:v); if(Array.isArray(v))return '['+v.map(stable).join(',')+']'; return '{'+Object.keys(v).filter(k=>v[k]!==undefined).sort().map(k=>JSON.stringify(k)+':'+stable(v[k])).join(',')+'}'}
 function haHash(v){const s=stable(v); let h=5381; for(let i=0;i<s.length;i++)h=(h*33^s.charCodeAt(i))|0; return s.length.toString(36)+'.'+(h>>>0).toString(36)}
@@ -2360,6 +2433,9 @@ function haApply(recs){let idx=null; const I=()=>{if(!idx){idx={}; Object.entrie
 function haStatus(){const d=today(), t=dayTotals(d), sg=suggest();
   return {date:d,kcal:Math.round(t[0]),kcalGoal:dayGoal(d),prot:Math.round(t[1]),streak:streakInfo().cur,updated:new Date().toISOString(),device:haDev(),
     gapDays:sg.gaps.days,gaps:sg.gaps.list.slice(0,6).map(g=>({name:g.name,pct:g.pct})),
+    runToday:(()=>{const r=runSum(dayRuns(d)); return {km:Math.round(r.km*10)/10,min:Math.round(r.min),kcal:Math.round(r.kcal),count:r.n}})(),
+    runWeek:(()=>{const r=runWeek(d); return {km:Math.round(r.km*10)/10,min:Math.round(r.min),kcal:Math.round(r.kcal),count:r.n}})(),
+    lastRun:(()=>{for(let i=0;i<60;i++){const dd=addDays(d,-i), rs=dayRuns(dd); if(rs.length){const r=rs.slice().sort((a,b)=>(a.t||0)-(b.t||0)).pop(); return {datum:dd,km:r.km,min:r.min,kcal:r.kcal,tempo:runPace(r)||null}}} return null})(),
     suggestions:sg.recipes.slice(0,5).map(s=>({name:s.name,fehlt:s.missing,gut_fuer:s.helps,kcal:s.kcal})),foods:sg.foods.slice(0,5).map(f=>({name:f.name,gut_fuer:f.helps}))}}
 async function haFetch(path,method,body){const g=S.settings; const url=String(g.haUrl).trim().replace(/\/+$/,'')+path;
   const headers={'Authorization':'Bearer '+String(g.haToken).trim(),'Content-Type':'application/json'};
@@ -2373,15 +2449,18 @@ async function haFetch(path,method,body){const g=S.settings; const url=String(g.
   finally{clearTimeout(tm)}}
 async function haSync(manual){if(!haOn()){if(manual)toast('Erst Adresse und Token eintragen.');return}
   if(HA.busy){HA.again=true;return} HA.busy=true; HA.again=false; clearTimeout(HA.timer);
-  try{const R=haRecords(), sent=HA.st.sent, first=!HA.st.epoch, now=Date.now(), ch=[], hs={};
-    Object.entries(R).forEach(([k,v])=>{const h=haHash(v); hs[k]=h; if(sent[k]!==h)ch.push({k,v,ts:first?0:now})});
-    Object.keys(sent).forEach(k=>{if(!(k in R))ch.push({k,del:true,ts:now})});
+  HA.st.tryAt=Date.now(); haSaveSt();
+  try{if(!manual&&haPlan()!=='live'&&S.settings.hcSync&&nativeHealth()){try{await syncHealth(false)}catch(e){}}
+    const R=haRecords(), sent=HA.st.sent, first=!HA.st.epoch, now=Date.now(), ch=[], hs={}, chg=HA.st.chg||{};
+    Object.entries(R).forEach(([k,v])=>{const h=haHash(v); hs[k]=h; if(sent[k]!==h)ch.push({k,v,ts:first?0:Math.min(now,chg[k]||now)})});
+    Object.keys(sent).forEach(k=>{if(!(k in R))ch.push({k,del:true,ts:Math.min(now,chg[k]||now)})});
     const res=await haFetch('/api/tellerflamme/sync','POST',{cursor:HA.st.cursor,epoch:HA.st.epoch||null,client:haDev(),changes:ch,status:haStatus()});
     if(!res||!Array.isArray(res.records))throw new Error('Unerwartete Antwort von Home Assistant.');
     const ns=res.reset?{}:{...sent}; if(!res.reset)ch.forEach(c=>{if(c.del)delete ns[c.k]; else ns[c.k]=hs[c.k]});
     const recs=res.records; res.records.forEach(r=>{if(r.del)delete ns[r.k]; else ns[r.k]=haHash(r.v)});
     if(recs.length){HA.applying=true; try{haApply(recs); Store.saveLocal()}finally{HA.applying=false}}
-    const wasReset=res.reset&&!first; HA.st={...HA.st,sent:ns,cursor:res.cursor,epoch:res.epoch,last:Date.now(),err:'',person:res.person||''}; haSaveSt();
+    const nc={...(HA.st.chg||{})}; ch.forEach(c=>{if((nc[c.k]||0)<=now)delete nc[c.k]});
+    const wasReset=res.reset&&!first; HA.st={...HA.st,sent:ns,chg:nc,cursor:res.cursor,epoch:res.epoch,last:Date.now(),err:'',person:res.person||''}; haSaveSt();
     if(wasReset)HA.again=true;
     const changed=recs.some(r=>!(r.k in R)||hs[r.k]!==haHash(r.v)||r.del);
     if(manual)toast(changed?'Abgeglichen: '+recs.length+' Änderungen geholt':'Abgeglichen');
@@ -2392,11 +2471,13 @@ async function haSync(manual){if(!haOn()){if(manual)toast('Erst Adresse und Toke
 function haSoon(ms){if(!haOn()||HA.applying)return; clearTimeout(HA.timer); HA.timer=setTimeout(()=>haSync(false),ms||4000)}
 function haCard(){const g=S.settings, art=!!(window.claude&&window.claude.use);
   return `<section class="card stack" style="gap:10px"><h3>Home Assistant</h3>
-   <div class="small">Gleicht Tagebuch, Vorrat, eigene Lebensmittel, Rezepte und Ziele zwischen deinen Geräten ab. In Home Assistant gibt es dann einen Vorrat, eine Einkaufsliste und Sensoren mit Rezeptvorschlag, Kalorien und Vitaminlücken.</div>
+   <div class="small">Gleicht Tagebuch, Läufe, Vorrat, eigene Lebensmittel, Rezepte und Ziele zwischen deinen Geräten ab. In Home Assistant gibt es dann einen Vorrat, eine Einkaufsliste und Sensoren mit Rezeptvorschlag, Kalorien, Laufen und Vitaminlücken.</div>
    ${art?'<div class="note">In der claude.ai-Ansicht ist die Verbindung zu Home Assistant gesperrt. Das geht in der Android-App oder auf der Webseite.</div>':`
    <div class="field"><label for="ha-url">Adresse</label><input id="ha-url" inputmode="url" autocomplete="off" placeholder="http://homeassistant.local:8123" value="${esc(g.haUrl||'')}"></div>
    <div class="field"><label for="ha-token">Zugangs-Token (langlebig)</label><input id="ha-token" type="password" autocomplete="off" placeholder="In Home Assistant: Profil → Sicherheit → Token erstellen" value="${esc(g.haToken||'')}"></div>
-   <label class="row small"><input type="checkbox" id="ha-on" style="width:auto" ${g.haOn?'checked':''}> Automatisch abgleichen (beim Öffnen, nach Änderungen und jede Minute)</label>
+   <label class="row small"><input type="checkbox" id="ha-on" style="width:auto" ${g.haOn?'checked':''}> Automatisch abgleichen</label>
+   <div class="field" ${g.haOn?'':'hidden'}><label for="ha-plan">Wie oft</label><select id="ha-plan"><option value="3" ${haPlan()==='3'?'selected':''}>3× am Tag (7, 13 und 20 Uhr)</option><option value="2" ${haPlan()==='2'?'selected':''}>2× am Tag (8 und 20 Uhr)</option><option value="live" ${haPlan()==='live'?'selected':''}>Sofort bei jeder Änderung</option></select>
+    ${haPlan()!=='live'?`<div class="tiny muted">Ist die App zu der Zeit zu, gleicht sie beim nächsten Öffnen ab. „Jetzt abgleichen“ geht immer.${haOn()&&haNext()?' Nächster Abgleich: '+(haNext().getDate()!==new Date().getDate()?'morgen ':'')+haNext().getHours()+' Uhr.':''}</div>`:''}</div>
    <div class="row wrapr"><button class="primary sm" data-act="hasave">Speichern und testen</button>${haOn()?`<button class="sm" data-act="hasync" ${HA.busy?'disabled':''}>Jetzt abgleichen</button>`:''}</div>
    ${HA.st.err&&g.haOn?`<div class="note" role="status">${esc(HA.st.err)}</div>`:HA.st.last&&g.haOn?`<div class="tiny muted" role="status">Zuletzt abgeglichen: ${new Date(HA.st.last).toLocaleString('de-DE')} · Gerät ${esc(haDev())}${HA.st.person?' · verbunden als <b>'+esc(HA.st.person)+'</b>':''}</div>`:''}
    <details><summary class="small">So richtest du es ein</summary><ol class="small" style="margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:4px">
@@ -2422,10 +2503,11 @@ document.addEventListener('click',async ev=>{const el=ev.target.closest('[data-a
   }});
 document.addEventListener('input',ev=>{if(ev.target.id==='vq'){UI.vq=ev.target.value; UI.vFocus=true; drawVorrat()}});
 document.addEventListener('keydown',ev=>{if(ev.key==='Enter'&&ev.target.id==='vq'){const h=(UI.vq||'').trim()?searchLocal(UI.vq).filter(x=>x.kind==='f'):[]; if(h.length&&nameHas(h[0].name,vWords(UI.vq))){const f=getFood(h[0].id); vAddItem(shortName(f.name),f.id)} else vAddItem(UI.vq)}});
-document.addEventListener('change',ev=>{if(ev.target.id==='ha-on'){S.settings.haOn=ev.target.checked; Store.saveMeta(); if(S.settings.haOn)haSoon(300); setTimeout(render,0)}});
-(function(){const sl=Store.saveLocal; Store.saveLocal=function(){sl.call(Store); if(!HA.applying)haSoon()}})();
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&haOn())haSoon(500)});
-setInterval(()=>{if(document.visibilityState==='visible'&&haOn()&&!HA.busy)haSync(false)},60000);
+document.addEventListener('change',ev=>{if(ev.target.id==='ha-on'){S.settings.haOn=ev.target.checked; Store.saveMeta(); if(S.settings.haOn&&(!HA.st.epoch||haDue()))haSoon(300); setTimeout(render,0)}
+  else if(ev.target.id==='ha-plan'){S.settings.haPlan=ev.target.value; Store.saveMeta(); if(haDue())haSoon(300); setTimeout(render,0)}});
+(function(){const sl=Store.saveLocal; Store.saveLocal=function(){sl.call(Store); if(HA.applying)return; if(haPlan()==='live')haSoon(); else haMark()}})();
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&haOn()&&haDue())haSoon(500)});
+setInterval(()=>{if(document.visibilityState==='visible'&&haOn()&&!HA.busy&&haDue())haSync(false)},60000);
 
 /* Selbst-Update der Handy-App: neue Web-Version von GitHub Pages laden, ohne APK neu zu installieren */
 const APP_VERSION='__APP_VERSION__', UPD_BASE='https://legolas06.github.io/Essen/';
@@ -2493,7 +2575,7 @@ async function checkUpdate(force){const U=updater(); if(!U||updBusy)return; if(A
 (function(){const U=updater(); if(U){try{U.notifyAppReady()}catch(e){} setTimeout(()=>checkUpdate(true),3000); document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkUpdate(false)})}})();
 (function(){const P=LN(); if(P){try{P.addListener('localNotificationActionPerformed',a=>{const m=a&&a.notification&&a.notification.extra&&a.notification.extra.meal; UI.date=today(); if(m){UI.meal=m; UI.tab='add'; UI.focusQ=true} else UI.tab='heute'; render()})}catch(e){}}})();
 document.addEventListener('toggle',ev=>{const t=ev.target; if(t.classList&&t.classList.contains('mrow')){if(t.open)UI.openMeal=t.dataset.meal; else if(UI.openMeal===t.dataset.meal)UI.openMeal=null}},true);
-loadLocal(); UI.lastToday=today(); render(); connectCloud(); if(haOn())setTimeout(()=>haSync(false),1200); if(S.settings.hcSync)setTimeout(()=>syncHealth(false),800);
+loadLocal(); UI.lastToday=today(); render(); connectCloud(); if(haOn()&&haDue())setTimeout(()=>haSync(false),1200); if(S.settings.hcSync)setTimeout(()=>syncHealth(false),800);
 </script>
 
 <script>if("serviceWorker" in navigator&&location.protocol==="https:"&&!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()))navigator.serviceWorker.register("sw.js").catch(()=>{})</script>

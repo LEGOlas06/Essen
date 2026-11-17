@@ -5,7 +5,7 @@ let x = fs.readFileSync(pl, 'utf8');
 const add = {
   NSCameraUsageDescription: 'Tellerflamme nutzt die Kamera, um Barcodes und Verpackungen zu lesen.',
   NSPhotoLibraryUsageDescription: 'Tellerflamme liest Fotos von Verpackungen, um Nährwerte zu erkennen.',
-  NSHealthShareUsageDescription: 'Tellerflamme liest Schritte, Aktivkalorien und Gewicht, um dein Kalorienziel anzupassen.',
+  NSHealthShareUsageDescription: 'Tellerflamme liest Schritte, Aktivkalorien, Läufe und Gewicht, um dein Kalorienziel anzupassen.',
   NSHealthUpdateUsageDescription: 'Tellerflamme schreibt keine Gesundheitsdaten.',
   NSLocalNetworkUsageDescription: 'Tellerflamme gleicht Vorrat und Tagebuch mit deinem Home Assistant im Heimnetz ab.'
 };
