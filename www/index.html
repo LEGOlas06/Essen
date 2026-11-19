@@ -1664,9 +1664,10 @@ async function readLabel(files){
       for(let i=0;i<files.length&&i<3;i++){UI.labelState=`Lese Text${files.length>1?' (Bild '+(i+1)+')':''} …`; const el=document.getElementById('lblState'); if(el)el.textContent=UI.labelState;
         const big=await shrinkImage(files[i],2400); const r=await nativeOCR().recognize({base64:await blobB64(big)}); text+='\n\n'+rowsFromLines(r.lines||[])+'\n\n'+(r.text||'')}
       data=parseLabel(text); data.text=text; data.via='Texterkennung (Handy)'}
-    else{await loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js'); let text='';
+    else{let text='';
       const imgs=await Promise.all(files.slice(0,3).map(f=>prepOCR(f)));
-      for(let i=0;i<imgs.length;i++){const r=await Tesseract.recognize(imgs[i],'deu',{logger:m=>{if(m.status==='recognizing text'){UI.labelState=`Lese Text${imgs.length>1?' (Bild '+(i+1)+')':''} … ${Math.round(m.progress*100)} %`; const el=document.getElementById('lblState'); if(el)el.textContent=UI.labelState}}}); text+='\n\n'+r.data.text}
+      for(let i=0;i<imgs.length;i++){const prog=pc=>{UI.labelState=`Lese Text${imgs.length>1?' (Bild '+(i+1)+')':''} … ${pc} %`; const el=document.getElementById('lblState'); if(el)el.textContent=UI.labelState};
+        const wk=await tessWorker('deu',prog); const r=await wk.recognize(imgs[i]); text+='\n\n'+r.data.text}
       data=parseLabel(text); data.text=text; data.via='Texterkennung'}
     UI.labelState=''; render(); UI.label=data; sheetLabel();
   }catch(e){UI.labelState=(window.claude&&window.claude.use&&!Store.sample)?'Die Packungserkennung braucht hier die Erlaubnis für Claude oder die Handy-App.':'Die Packung konnte nicht gelesen werden ('+(e&&e.message||'Fehler')+'). Versuch ein schärferes Foto mit der Nährwerttabelle gerade im Bild, oder trag die Werte selbst ein.'; render()}
@@ -1788,11 +1789,11 @@ function menuEstimate(it){const raw=deAccent(thaiJoin(it.name+' '+(it.alt||'')+'
   const nm=(it.de||menuTranslate(it.name)).slice(0,60); return {name:nm+' (geschätzt)',ing,unit:'Portion',est:true}}
 /* ---------- Texterkennung ---------- */
 function wasmSimd(){try{return WebAssembly.validate(new Uint8Array([0,97,115,109,1,0,0,0,1,5,1,96,0,1,123,3,2,1,0,10,10,1,8,0,65,0,253,15,253,98,11]))}catch(e){return false}}
-let ocrW=null, ocrWL='', ocrLocal=null;
+let ocrW=null, ocrWL='', ocrLocal=null, ocrProg=()=>{};
 async function tessLoad(){if(window.Tesseract)return; const base=new URL('ocr/',location.href).href;
   try{await loadScript(base+'tesseract.min.js'); ocrLocal=base}catch(e){ocrLocal=null; await loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js')}}
-async function tessWorker(langs,progress){await tessLoad(); if(ocrW&&ocrWL===langs)return ocrW; if(ocrW){try{await ocrW.terminate()}catch(e){} ocrW=null}
-  const cdn='https://cdn.jsdelivr.net/npm/', opt={logger:m=>{if(m.status==='recognizing text')progress(Math.round(m.progress*100))}};
+async function tessWorker(langs,progress){await tessLoad(); if(ocrW&&ocrWL===langs){ocrProg=progress;return ocrW} if(ocrW){try{await ocrW.terminate()}catch(e){} ocrW=null}
+  const cdn='https://cdn.jsdelivr.net/npm/', opt={logger:m=>{if(m.status==='recognizing text')ocrProg(Math.round(m.progress*100))}}; ocrProg=progress;
   if(ocrLocal){opt.workerPath=ocrLocal+'worker.min.js'; opt.workerBlobURL=false; opt.langPath=ocrLocal.replace(/\/$/,''); opt.corePath=wasmSimd()?ocrLocal+'tesseract-core-simd-lstm.wasm.js':cdn+'tesseract.js-core@5.1.1/tesseract-core-lstm.wasm.js'}
   ocrW=await Tesseract.createWorker(langs,1,opt); ocrWL=langs; return ocrW}
 function imgSize(b){return new Promise(res=>{const i=new Image(); i.onload=()=>{res([i.naturalWidth,i.naturalHeight]); URL.revokeObjectURL(i.src)}; i.onerror=()=>res([0,0]); i.src=URL.createObjectURL(b)})}
@@ -1802,7 +1803,7 @@ async function ocrMenu(file,lang,progress){
   const r=await wk.recognize(img,{},{text:true,blocks:true}); const lines=(r.data.lines||[]).map(l=>({text:l.text,x:l.bbox.x0,y:l.bbox.y0,w:l.bbox.x1-l.bbox.x0,h:l.bbox.y1-l.bbox.y0})).filter(l=>(l.text||'').trim()&&(l.confidence==null||l.confidence>20));
   return {lines,w,h,img:await shrinkImage(file,1600),via:ocrLocal?'Texterkennung (offline)':'Texterkennung'}}
 function menuSame(a,b){const t=x=>new Set(deAccent(x).toLowerCase().match(/[a-z\u0E00-\u0E7F]{3,}/g)||[]); const A=t(a),B=t(b); if(!A.size||!B.size)return false; let c=0; A.forEach(w=>{if(B.has(w))c++}); return c/Math.min(A.size,B.size)>=0.5}
-const OCR_FILES=['tesseract.min.js','worker.min.js','tesseract-core-simd-lstm.wasm.js','eng.traineddata.gz','tha.traineddata.gz'];
+const OCR_FILES=['tesseract.min.js','worker.min.js','tesseract-core-simd-lstm.wasm.js','eng.traineddata.gz','tha.traineddata.gz','deu.traineddata.gz'];
 async function menuPrep(){const M=UI.menu=UI.menu||{items:[]}; const base=new URL('ocr/',location.href).href; let ok=0;
   for(const f of OCR_FILES){M.busy='Lade für offline … '+(ok+1)+'/'+OCR_FILES.length; sheetMenu(); try{const r=await fetch(base+f,{cache:'reload'}); if(r.ok){await r.arrayBuffer(); ok++}}catch(e){}}
   M.busy=''; M.err=ok===OCR_FILES.length?'':'Nicht alles konnte geladen werden. Versuch es mit Internet nochmal.'; try{localStorage.setItem('tf-ocr-prep',ok===OCR_FILES.length?'1':'')}catch(e){} toast(ok===OCR_FILES.length?'Speisekarten-Scanner ist jetzt offline bereit.':'Offline-Vorbereitung unvollständig'); sheetMenu()}
@@ -1830,7 +1831,7 @@ function sheetMenu(){const M=UI.menu; const items=M?M.items:[]; const it=M&&M.se
    ${it?menuPickHtml(it):`
    <div class="seg" role="group" aria-label="Sprache der Karte">${[['en','Englisch'],['id','Indonesisch'],['th','Thai']].map(([k,l])=>`<button data-act="menulang" data-l="${k}" class="${UI.menuLang===k?'on':''}">${l}</button>`).join('')}</div>
    <button class="primary" data-act="menuphoto">${svgI('<path d="M4 8h3l2-2h6l2 2h3v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/>')}${M&&M.img?'Neues Foto der Karte':'Foto der Speisekarte'}</button>
-   ${!isNative()&&'serviceWorker' in navigator&&location.protocol==='https:'&&!(M&&M.img)?`<button class="sm" data-act="menuprep">${(()=>{try{return localStorage.getItem('tf-ocr-prep')}catch(e){return ''}})()?'✓ Offline bereit · nochmal laden':'Für unterwegs offline laden (ca. 8 MB)'}</button>`:''}
+   ${!isNative()&&'serviceWorker' in navigator&&location.protocol==='https:'&&!(M&&M.img)?`<button class="sm" data-act="menuprep">${(()=>{try{return localStorage.getItem('tf-ocr-prep')}catch(e){return ''}})()?'✓ Offline bereit · nochmal laden':'Für unterwegs offline laden (ca. 9 MB)'}</button>`:''}
    ${M&&M.busy?`<div class="note" id="menuState" role="status">${esc(M.busy)}</div>`:''}
    ${M&&M.err?`<div class="note">${esc(M.err)}</div>`:''}
    ${M&&M.img?`<div class="mimg"><img src="${M.img}" alt="Dein Foto der Speisekarte">${boxes}</div>`:''}
