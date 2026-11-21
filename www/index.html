@@ -94,6 +94,7 @@ html,body{overflow-x:hidden;overflow-x:clip;max-width:100%}
 .meal-h{display:flex;align-items:center;justify-content:space-between;padding-block:4px}
 .entry{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
 .entry .grow div:first-child{font-weight:600;overflow-wrap:anywhere}
+.eedit{cursor:pointer;border-radius:8px}.eedit:active{background:var(--surface2)}.eedit .pen{opacity:.45;font-weight:400;font-size:12px}
 .facts .fr{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);align-items:baseline}
 .facts .fr:last-child{border-bottom:0}.facts .fr.sub{padding-left:14px;font-size:14px;color:var(--muted)}.facts .fr.sub b{color:var(--ink)}.facts .fr b{white-space:nowrap}
 details.why>summary{cursor:pointer;font-size:12px;color:var(--accent,#c6f24e);list-style:none;margin-top:2px}details.why>summary::-webkit-details-marker{display:none}details.why>summary::before{content:"▸ "}details.why[open]>summary::before{content:"▾ "}.whyb{font-size:13px;line-height:1.45;background:var(--surface2);border-radius:12px;padding:8px 12px;margin-top:6px}.whyb p{margin:6px 0 2px}.whyb ul{margin:0 0 4px;padding-left:18px}.whyb li{margin:2px 0}
@@ -921,7 +922,7 @@ function vHeute(si){
     return `<details class="mrow"${UI.openMeal===m?' open':''} data-meal="${m}"><summary><span class="mic"><svg viewBox="0 0 60 60" aria-hidden="true"><circle cx="30" cy="30" r="25" fill="none" stroke="var(--surface2)" stroke-width="5"/><circle cx="30" cy="30" r="25" fill="none" stroke="var(--accent)" stroke-width="5" stroke-linecap="round" stroke-opacity="${p>0?1:0}" stroke-dasharray="${C*p} ${C}" transform="rotate(-90 30 30)"/></svg><i>${MEALICON[m]}</i></span>
       <span class="grow"><b class="mname">${l}${es.length?' <span class="tiny muted">('+es.length+')</span>':''}</b><span class="muted small num">${Math.round(k)} / ${mg} kcal</span></span>
       <button class="plus" data-act="addmeal" data-meal="${m}" aria-label="${l} eintragen">+</button></summary>
-    <div class="mbody">${es.length?es.map(e=>`<div class="entry"><div class="grow"><div>${esc(e.name)}</div><div class="pfc">${entryTime(e,d)?entryTime(e,d)+' Uhr · ':''}${fmt(e.amt)} ${esc(e.unit)} · E ${fmt(e.n[1])} · K ${fmt(e.n[2])} · F ${fmt(e.n[4])}</div></div><span class="kc">${Math.round(e.n[0])}</span><button class="ghost" data-act="delentry" data-id="${e.id}" aria-label="Eintrag löschen">✕</button></div>`).join('')+plateHtml(es,m):'<div class="tiny muted" style="padding:6px 0">Noch nichts eingetragen.</div>'}</div></details>`}).join('');
+    <div class="mbody">${es.length?es.map(e=>`<div class="entry"><div class="grow eedit" data-act="editentry" data-id="${e.id}" role="button" tabindex="0" aria-label="${esc(e.name)} bearbeiten"><div>${esc(e.name)} <span class="pen" aria-hidden="true">✎</span></div><div class="pfc">${entryTime(e,d)?entryTime(e,d)+' Uhr · ':''}${fmt(e.amt)} ${esc(e.unit)} · E ${fmt(e.n[1])} · K ${fmt(e.n[2])} · F ${fmt(e.n[4])}</div></div><span class="kc">${Math.round(e.n[0])}</span><button class="ghost" data-act="delentry" data-id="${e.id}" aria-label="Eintrag löschen">✕</button></div>`).join('')+plateHtml(es,m):'<div class="tiny muted" style="padding:6px 0">Noch nichts eingetragen.</div>'}</div></details>`}).join('');
   const ref=REF[g.sex];
   const hasR=entries.some(e=>e.rng); const rl=MICRO.map((k,j)=>entries.reduce((s,e)=>s+(e.rng?e.rng[0][j]:e.n[IDX[k]]),0)), rh=MICRO.map((k,j)=>entries.reduce((s,e)=>s+(e.rng?e.rng[1][j]:e.n[IDX[k]]),0));
   const rr={hasR,rl,rh}; const grp=(title,keys,open)=>`<details class="card nut"${open?' open':''}><summary><h2>${title}</h2><span class="tiny muted" style="white-space:nowrap">% vom Bedarf</span></summary><div class="micro" style="margin-top:10px">${nutriRows(keys,t,entries,ref,rr)}</div></details>`;
@@ -982,7 +983,7 @@ const PK=new Map(); function pkey(s){let k=PK.get(s); if(k===undefined){k=' '+ph
 function fuzzyHit(key,alts){const toks=key.trim().split(' '); return alts.some(a=>{if(a.length<4)return false; const m=a.length>=8?2:1; return toks.some(t=>t.length>=3&&(lev(t.slice(0,a.length),a,m)<=m||lev(t,a,m)<=m))})}
 /* Rang: 0 = Name beginnt damit, 1 = enthalten, 2 = Synonym, 3 = unscharf (Tippfehler); -1 = kein Treffer */
 function matchRank(text,ws,fuzzy,extra){if(extra){const r=matchRank(text,ws,fuzzy); if(r>=0)return r; const r2=matchRank(text+' '+extra,ws,fuzzy); return r2<0?-1:r2+0.6}
-  const key=pkey(text); let r=key.startsWith(' '+ws[0][0])?0:1;
+  const key=pkey(text); let r=key.startsWith(' '+ws[0][0])?(/^[a-z0-9äöüß]/.test(key.charAt(ws[0][0].length+1))?0.2:0):1;
   for(const alts of ws){if(key.includes(' '+alts[0]))continue; if(key.includes(alts[0])){r=Math.max(r,1.5);continue} if(alts.slice(1).some(a=>key.includes(a))){r=Math.max(r,2);continue} if(fuzzy&&fuzzyHit(key,alts)){r=3;continue} return -1}
   return r}
 /* ---------- Gerichte, die die App in Zutaten zerlegt (Mengen je Portion, typische Werte) ---------- */
@@ -1010,6 +1011,14 @@ const DISH=[
  ['Schinken-Käse-Toast','schinkenkäsetoast toast hawaii toast schinken käse',[['blsB314000',50],['blsW424000',25],['gouda',25],['butter',5]]],
  ['Müsli mit Milch','müsli milch',[['muesli',60],['milch',200]]],
  ['Müsli mit Joghurt','müsli joghurt joghurtmüsli',[['muesli',50],['joghurt',150],['beeren',50]]],
+ ['Müsli mit Apfel','müsli apfel apfelmüsli müsli mit apfel und milch',[['muesli',60],['milch',200],['apfel',100]]],
+ ['Müsli mit Apfel und Joghurt','müsli apfel joghurt apfelmüsli joghurtmüsli',[['muesli',50],['joghurt',150],['apfel',100]]],
+ ['Tee (ungesüßt, 1 Tasse)','tee tasse tee ungesüßt ungezuckert schwarztee kräutertee früchtetee',[['blsN630000',250]]],
+ ['Tee mit Zucker (1 Tasse)','tee zucker gezuckert gesüßt tasse',[['blsN630000',250],['zucker',8]]],
+ ['Tee mit Honig (1 Tasse)','tee honig tasse',[['blsN630000',250],['honig',10]]],
+ ['Tee mit Milch (1 Tasse)','tee milch tasse',[['blsN630000',220],['milch',30]]],
+ ['Tee mit Milch und Zucker (1 Tasse)','tee milch zucker tasse',[['blsN630000',220],['milch',30],['zucker',8]]],
+ ['Schokoschirmchen','schokoschirmchen schokoladeschirmchen schokoladenschirmchen schirmchen schokolade schokoschirm',[['blsS539900',15]],'Stück'],
  ['Porridge mit Banane','porridge haferbrei banane',[['haferflocken',60],['milch',250],['banane',100],['honig',8]]],
  ['Rührei mit Brot','rührei brot',[['ei',110],['butter',5],['milch',20],['vollkornbrot',60]]],
  ['Spiegelei mit Brot','spiegelei brot',[['ei',110],['butter',5],['vollkornbrot',60]]],
@@ -1460,7 +1469,7 @@ function vAdd(){
   <div class="seg" role="group" aria-label="Mahlzeit">${MEALS.map(([m,l])=>`<button data-act="meal" data-meal="${m}" class="${UI.meal===m?'on':''}">${l}</button>`).join('')}</div>
   ${(()=>{const es=(S.days[UI.date]||[]).filter(e=>e.meal===UI.meal); if(!es.length)return '';
     return `<section class="card stack" style="gap:6px"><div class="row" style="justify-content:space-between"><span class="label">Schon in ${MEALS.find(m=>m[0]===UI.meal)[1]}</span><span class="kc small">${Math.round(es.reduce((a,e)=>a+e.n[0],0))} kcal</span></div>
-    <div class="list">${es.map(e=>`<div class="entry"><div class="grow"><div>${esc(e.name)}</div><div class="pfc">${fmt(e.amt)} ${esc(e.unit)}</div></div><span class="kc">${Math.round(e.n[0])}</span><button class="ghost" data-act="delentry" data-id="${e.id}" aria-label="Eintrag löschen">✕</button></div>`).join('')}</div>
+    <div class="list">${es.map(e=>`<div class="entry"><div class="grow eedit" data-act="editentry" data-id="${e.id}" role="button" tabindex="0" aria-label="${esc(e.name)} bearbeiten"><div>${esc(e.name)} <span class="pen" aria-hidden="true">✎</span></div><div class="pfc">${fmt(e.amt)} ${esc(e.unit)}</div></div><span class="kc">${Math.round(e.n[0])}</span><button class="ghost" data-act="delentry" data-id="${e.id}" aria-label="Eintrag löschen">✕</button></div>`).join('')}</div>
     <button class="primary" data-act="donemeal">Fertig</button></section>`})()}
   ${(()=>{const w=(S.body[UI.date]&&S.body[UI.date].water)||0, g=drinkGoal(UI.date); return `<section class="card row" style="gap:10px;align-items:center;padding:12px 14px"><span style="font-size:24px">💧</span><div class="grow"><b>Wasser trinken</b><div class="tiny muted">${(w/1000).toFixed(2).replace('.',',')} von ${(g/1000).toFixed(1).replace('.',',')} l</div></div><button class="sm" data-act="water" data-ml="250">+250 ml</button><button class="sm" data-act="water" data-ml="500">+500 ml</button></section>`})()}
   <div class="row" style="justify-content:flex-end"><button class="sm ${UI.multi?'primary':''}" data-act="multi" aria-pressed="${!!UI.multi}">${UI.multi?'Mehrfachauswahl an':'Mehrere auswählen'}</button></div>
@@ -1495,6 +1504,35 @@ function amtData(kind,id,food){
   const f=food||getFood(id); return {kind:'f',ref:f.id,name:f.name+(f.brand?' ('+f.brand+')':''),per:f.per,unitMode:'g',unit:'g',amt:(f.portions&&f.portions[0]?f.portions[0][1]:100),noMicro:f.micros===false,portions:f.portions||[],est:f.est||null,rng:f.rng||null}}
 function openAmount(kind,id,food){UI.amt=amtData(kind,id,food); sheetAmount()}
 function makeEntry(a,tm){const f=a.unitMode==='g'?a.amt/100:a.amt; const e={id:uid(),kind:a.kind,ref:a.ref,name:a.name,amt:a.amt,unit:a.unitMode==='g'?'g':a.unit,meal:UI.meal,time:tm,n:NK.map((k,i)=>{const v=a.per[i]; return v==null?(i<NK_CORE?0:null):Math.round(v*f*1000)/1000}),t:Date.now()}; if(a.noMicro)e.noMicro=true; if(a.omit&&a.omit.length)e.omit=[...a.omit]; if(a.rng)e.rng=a.rng.map(arr=>arr.map(v=>Math.round(v*f*1000)/1000)); return e}
+/* Eintrag nachträglich bearbeiten: Menge, Uhrzeit, Mahlzeit. Nährwerte werden im Verhältnis neu/alt umgerechnet
+   (sie hängen linear von der Menge ab), so geht es auch bei Produkten, die nicht mehr in der Datenbank sind.
+   Die ID bleibt gleich, damit der Home-Assistant-Abgleich den Eintrag als geändert erkennt. */
+function editUnitLabel(u){return u==='g'?'Gramm':u==='ml'?'Milliliter':u==='Stück'?'Stück':'Portionen'}
+function editScaled(e,amt){const f=e.amt>0?amt/e.amt:0; return e.n.map(v=>v==null?null:v*f)}
+function openEdit(id){const e=(S.days[UI.date]||[]).find(x=>x.id===id); if(!e)return;
+  UI.edit={id,amt:e.amt,meal:e.meal,time:entryTime(e,UI.date)||MEALTIME[e.meal]}; sheetEdit()}
+function sheetEdit(){const E=UI.edit; const e=(S.days[UI.date]||[]).find(x=>x.id===E.id); if(!e){closeSheet();return}
+  const byG=e.unit==='g'||e.unit==='ml'; const f=byG?getFood(e.ref):null;
+  const quick=byG?[...((f&&f.portions)||[]).slice(0,3).map(p=>[p[0]+' ('+p[1]+' '+e.unit+')',p[1]]),['100 '+e.unit,100]]:[['½',0.5],['1',1],['1½',1.5],['2',2],['3',3]];
+  const step=byG?[[-10,'−10'],[10,'+10']]:[[-0.5,'−½'],[0.5,'+½']];
+  const n=editScaled(e,E.amt);
+  openSheet(`<div class="stack"><div><div class="label">Eintrag bearbeiten · ${fmtDate(UI.date)}</div><h2 style="margin-top:4px">${esc(e.name)}</h2></div>
+   <div class="row" style="gap:6px"><button class="sm" data-act="estep" data-v="${step[0][0]}" aria-label="weniger">${step[0][1]}</button><input id="eAmt" type="number" inputmode="decimal" min="0" step="any" value="${Math.round(E.amt*100)/100}" style="max-width:110px" aria-label="Menge"><button class="sm" data-act="estep" data-v="${step[1][0]}" aria-label="mehr">${step[1][1]}</button><span class="muted">${editUnitLabel(e.unit)}</span></div>
+   <div class="row wrapr">${quick.map(q=>`<button class="sm" data-act="equick" data-v="${q[1]}">${esc(q[0])}</button>`).join('')}</div>
+   <div class="tiny muted">Vorher: ${fmt(e.amt)} ${esc(e.unit)} · ${Math.round(e.n[0])} kcal</div>
+   <div class="seg" role="group" aria-label="Mahlzeit">${MEALS.map(([m,l])=>`<button data-act="emeal" data-meal="${m}" class="${E.meal===m?'on':''}">${l}</button>`).join('')}</div>
+   <div class="row"><label for="eTime" class="small muted" style="white-space:nowrap">Gegessen um</label><input id="eTime" type="time" value="${E.time}" style="max-width:130px"></div>
+   <div class="card"><div class="row" style="justify-content:space-between;align-items:baseline"><b class="num" style="font-family:var(--display);font-size:26px" id="eK">${Math.round(n[0])} kcal</b><span class="pfc" id="eM">E ${fmt(n[1])} g · K ${fmt(n[2])} g · F ${fmt(n[4])} g</span></div></div>
+   <button class="primary" data-act="saveedit">Speichern</button><div class="row" style="gap:8px"><button class="grow" data-act="close">Abbrechen</button><button class="grow" data-act="delentry" data-id="${e.id}" style="color:#ff6b6b">Löschen</button></div></div>`);
+  const ti=document.getElementById('eTime'); ti.addEventListener('input',()=>{E.time=ti.value});
+  const inp=document.getElementById('eAmt'); inp.addEventListener('input',()=>{E.amt=parseFloat(String(inp.value).replace(',','.'))||0; const nn=editScaled(e,E.amt); document.getElementById('eK').textContent=Math.round(nn[0])+' kcal'; document.getElementById('eM').textContent=`E ${fmt(nn[1])} g · K ${fmt(nn[2])} g · F ${fmt(nn[4])} g`});
+}
+function saveEdit(){const E=UI.edit; const arr=S.days[UI.date]||[]; const i=arr.findIndex(x=>x.id===E.id); if(i<0){closeSheet();return}
+  if(!(E.amt>0)){toast('Bitte eine Menge eingeben. Zum Entfernen „Löschen“ nehmen.');return}
+  const e=arr[i], f=E.amt/e.amt, r3=v=>Math.round(v*1000)/1000;
+  const ne={...e,amt:Math.round(E.amt*1000)/1000,meal:E.meal,time:E.time||e.time,n:e.n.map(v=>v==null?null:r3(v*f))};
+  if(e.rng)ne.rng=e.rng.map(a=>a.map(v=>r3(v*f)));
+  arr[i]=ne; Store.saveDay(UI.date); UI.edit=null; closeSheet(); render(); toast('Eintrag geändert')}
 /* Mehrfachauswahl */
 UI.sel=[];
 function selKey(kind,id){return kind+':'+id}
@@ -2356,7 +2394,12 @@ document.addEventListener('click',async ev=>{
     case 'close':closeSheet();break;
     case 'day':UI.date=addDays(UI.date,+el.dataset.d); if(UI.date>today())UI.date=today(); render();break;
     case 'addmeal':UI.meal=el.dataset.meal;UI.tab='add';UI.focusQ=true;render();break;
-    case 'delentry':S.days[UI.date]=(S.days[UI.date]||[]).filter(e=>e.id!==el.dataset.id);Store.saveDay(UI.date);render();toast('Eintrag gelöscht');break;
+    case 'delentry':S.days[UI.date]=(S.days[UI.date]||[]).filter(e=>e.id!==el.dataset.id);Store.saveDay(UI.date);if(UI.edit){UI.edit=null;closeSheet()}render();toast('Eintrag gelöscht');break;
+    case 'editentry':openEdit(el.dataset.id);break;
+    case 'estep':UI.edit.amt=Math.max(0,Math.round(((UI.edit.amt||0)+(+el.dataset.v))*100)/100);sheetEdit();break;
+    case 'equick':UI.edit.amt=+el.dataset.v;sheetEdit();break;
+    case 'emeal':UI.edit.meal=el.dataset.meal;sheetEdit();break;
+    case 'saveedit':saveEdit();break;
     case 'multi':UI.multi=!UI.multi; if(!UI.multi)UI.sel=[]; render();break;
     case 'multiamt':sheetMulti();break;
     case 'mquick':UI.sel[+el.dataset.i].a.amt=+el.dataset.v;sheetMulti();break;
@@ -2436,7 +2479,7 @@ document.addEventListener('input',ev=>{
   else if(ev.target.dataset.ingi!=null){UI.nr.ing[+ev.target.dataset.ingi][1]=parseFloat(ev.target.value)||0}
   else if(ev.target.id==='idea'){UI.idea=ev.target.value}
 });
-document.addEventListener('keydown',ev=>{if(ev.key==='Enter'&&ev.target.id==='ean')lookupBarcode(ev.target.value); if(ev.key==='Enter'&&ev.target.id==='q'&&!searchLocal(UI.q).length)searchOnline(); if(ev.key==='Escape')closeSheet()});
+document.addEventListener('keydown',ev=>{if(ev.key==='Enter'&&ev.target.id==='eAmt'){ev.preventDefault();saveEdit();return} if((ev.key==='Enter'||ev.key===' ')&&ev.target.classList&&ev.target.classList.contains('eedit')){ev.preventDefault();openEdit(ev.target.dataset.id);return} if(ev.key==='Enter'&&ev.target.id==='ean')lookupBarcode(ev.target.value); if(ev.key==='Enter'&&ev.target.id==='q'&&!searchLocal(UI.q).length)searchOnline(); if(ev.key==='Escape')closeSheet()});
 document.addEventListener('change',ev=>{const id=ev.target.id;
   if(id==='b-burn'||id==='b-w'){const b=S.body[UI.date]=S.body[UI.date]||{}; const v=parseFloat(String(ev.target.value).replace(',','.'));
     if(id==='b-burn'){if(v>=0)b.burn=Math.round(v);else delete b.burn} else {if(v>0){b.w=Math.round(v*10)/10; if(UI.date===today())S.settings.weight=b.w}else delete b.w}
