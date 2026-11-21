@@ -96,6 +96,7 @@ html,body{overflow-x:hidden;overflow-x:clip;max-width:100%}
 .entry .grow div:first-child{font-weight:600;overflow-wrap:anywhere}
 .facts .fr{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);align-items:baseline}
 .facts .fr:last-child{border-bottom:0}.facts .fr.sub{padding-left:14px;font-size:14px;color:var(--muted)}.facts .fr.sub b{color:var(--ink)}.facts .fr b{white-space:nowrap}
+details.why>summary{cursor:pointer;font-size:12px;color:var(--accent,#c6f24e);list-style:none;margin-top:2px}details.why>summary::-webkit-details-marker{display:none}details.why>summary::before{content:"▸ "}details.why[open]>summary::before{content:"▾ "}.whyb{font-size:13px;line-height:1.45;background:var(--surface2);border-radius:12px;padding:8px 12px;margin-top:6px}.whyb p{margin:6px 0 2px}.whyb ul{margin:0 0 4px;padding-left:18px}.whyb li{margin:2px 0}
 details.nut>summary{display:flex;justify-content:space-between;align-items:center;cursor:pointer;list-style:none}details.nut>summary::-webkit-details-marker{display:none}
 details.nut>summary h2::after{content:" ▾";font-size:.7em;color:var(--muted)}details.nut:not([open])>summary h2::after{content:" ▸"}
 .ampel{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.amp{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:4px 8px;border-radius:99px;background:var(--surface2)}.amp i{width:8px;height:8px;border-radius:50%}.amp b{font-weight:700}.amp.good i{background:var(--good)}.amp.warn i{background:var(--warn)}.amp.low i{background:var(--low)}
@@ -387,6 +388,7 @@ const R0=[
 {id:'r-brownie-light',name:'Brownies mit nur 100 g Butter',src:'own',yield:16,unit:'Stück',ing:[['schoko',200],['butter',100],['zucker',120],['ei',165],['mehl',90],['kakao',30]]},
 {id:'r-brownie',name:'Einfache Brownies',src:'own',yield:16,unit:'Stück',ing:[['schoko',200],['butter',150],['zucker',180],['ei',165],['mehl',100],['kakao',30]]},
 {id:'r-schokokuchen',name:'Klassischer Schokokuchen',src:'own',yield:12,unit:'Stück',ing:[['mehl',250],['zucker',208],['kakao',40],['ei',220],['milch',200],['butter',200]]},
+{id:'r-schokotorte-himbeer',name:'Schokotorte mit Vanille-Himbeercreme (Fitness)',src:'empf',yield:12,unit:'Stück',ing:[['mehl',400],['kakao',60],['blsR421100',16],['staerke',16],['blsR114000',5],['ei',165],['milch',200],['blsM820500',200],['quark',250],['blsF302100',200],['schoko',160],['sahne',150]],steps:['Ofen auf 180 °C Umluft vorheizen. Mehl, Kakao, Backpulver, Stärke, 1 TL Salz und 1 EL Espressopulver mischen.','3 Eier und 200 ml Milch verquirlen, unter die trockenen Zutaten rühren und nach Geschmack süßen (Süßstoff zählt nicht, Zucker extra eintragen). Ist der Teig zu fest, einen Schuss Milch oder Mineralwasser dazu.','Teig auf 3 kleine Formen (18 cm) verteilen, oder nacheinander backen. Etwa 30–35 Minuten backen, dann stürzen und auskühlen lassen.','Creme: Frischkäse mit Vanillemark glatt rühren, Quark unterheben, süßen und kalt stellen.','Himbeeren pürieren (TK-Himbeeren vorher auftauen lassen).','Von jedem Boden die gewölbte Oberseite abschneiden. Boden mit Himbeerpüree und dann mit Creme bestreichen, die nächsten Böden genauso darauf stapeln.','Ganache: Sahne mit der Schokolade erwärmen und rühren, bis sie dickflüssig ist, über die Torte geben. Leichter: statt Ganache 400 g Quark gesüßt aufstreichen. Torte kalt stellen und in 12 Stücke schneiden.']},
 {id:'r-oats',name:'Overnight Oats mit Beeren',src:'empf',yield:2,unit:'Portion',ing:[['haferflocken',100],['joghurt',300],['milch',200],['chia',24],['beeren',200],['honig',16]]},
 {id:'r-curry',name:'Rote-Linsen-Curry mit Spinat',src:'empf',yield:4,unit:'Portion',ing:[['linsenroh',250],['zwiebel',100],['knoblauch',8],['ingwer',10],['rapsoel',10],['tomstueck',400],['kokosmilch',400],['bruehe',500],['spinat',100],['zitrone',15]]},
 {id:'r-ofen',name:'Ofengemüse mit Kichererbsen und Joghurt-Dip',src:'empf',yield:4,unit:'Portion',ing:[['suesskartoffel',500],['paprika',300],['zucchini',300],['zwiebel',80],['kichererbsen',480],['olivenoel',30],['joghurt',300],['knoblauch',4],['zitrone',20]]},
@@ -497,44 +499,119 @@ function oracOfName(name){const n=phon(name).replace(/ /g,''); for(const [k,v] o
 function entryParts(e){if(e.kind==='r'){const r=entryRecipe(e); if(r){const c=recipeCalc(r); const tot=r.ing.reduce((s,x)=>s+x[1],0)||1; const g=entryGrams(e);
     return r.ing.map(([fid,gr])=>{const f=getFood(fid); return f?{name:f.name,per:f.per,g:g*gr/tot}:null}).filter(Boolean)}}
   const g=entryGrams(e); if(!g)return []; const f=getFood(e.ref); return [{name:e.name,per:f?f.per:e.n.map(v=>v==null?null:v/g*100),g}]}
+/* Einträge mit gleichem Namen zusammenfassen (für die Begründungen) */
+function byName(list,keys){const m=new Map(); list.forEach(o=>{const k=o.name; if(!m.has(k))m.set(k,{...o}); else {const a=m.get(k); keys.forEach(x=>a[x]=(a[x]||0)+(o[x]||0))}}); return [...m.values()]}
+/* Entzündungsindex (Dietary Inflammatory Index nach Shivappa et al. 2014): Effektwert, weltweiter Mittelwert, Standardabweichung */
+const DII_P={kcal:[0.180,2056,338],carb:[0.097,272.2,40],prot:[0.021,79.4,13.9],fat:[0.298,71.4,19.4],sat:[0.373,28.6,8.0],mufa:[-0.009,27.0,6.1],pufa:[-0.337,13.88,3.76],n3:[-0.436,1.06,1.06],n6:[-0.159,10.80,7.50],fib:[-0.663,18.8,4.9],chol:[0.110,279.4,51.2],vA:[-0.401,983.9,518.6],bcar:[-0.584,3718,1720],vC:[-0.424,118.2,43.46],vD:[-0.446,6.26,2.21],vE:[-0.419,8.73,1.49],b1:[-0.098,1.70,0.66],b2:[-0.068,1.70,0.79],b3:[-0.246,25.90,11.77],b6:[-0.365,1.47,0.74],b12:[0.106,5.15,2.70],fol:[-0.190,273.0,70.7],fe:[0.032,13.35,3.71],mg:[-0.484,310.1,139.4],zn:[-0.313,9.84,2.19],se:[-0.191,67.0,25.1]};
+const DII_FOOD={onion:[['zwiebel'],-0.301,35.9,18.4],garlic:[['knoblauch'],-0.412,4.35,2.90],ginger:[['ingwer'],-0.453,59.0,63.2],turmeric:[['kurkuma'],-0.785,533.6,754.3,1000],tea:[['grunter tee','schwarzer tee','gruner tee','schwarztee','tee'],-0.536,1.69,1.53,0.008]};
+const DII_FOODN={onion:'Zwiebeln',garlic:'Knoblauch',ginger:'Ingwer',turmeric:'Kurkuma',tea:'Tee'};
+function phiN(z){const tt=1/(1+0.3275911*Math.abs(z)/Math.SQRT2); const y=1-(((((1.061405429*tt-1.453152027)*tt)+1.421413741)*tt-0.284496736)*tt+0.254829592)*tt*Math.exp(-z*z/2); return 0.5*(1+(z<0?-y:y))}
+/* keys: feste Liste der Nährstoffe (sonst nach Abdeckung gewählt) */
+function diiCalc(entries,t,keys){let dii=0,used=0; const parts=[]; keys=keys||Object.keys(DII_P).filter(k=>covOf(entries,k)>=0.7);
+  keys.forEach(k=>{const [eff,mean,sd]=DII_P[k]; const z=((t[IDX[k]]||0)-mean)/sd; const c=(2*phiN(z)-1)*eff; dii+=c; used++; parts.push([k,c,z])});
+  Object.entries(DII_FOOD).forEach(([key,[kw,eff,mean,sd,mul]])=>{let g=0; entries.forEach(e=>entryParts(e).forEach(p=>{const n=phon(p.name); if(kw.some(w=>n.includes(phon(w))))g+=p.g*(mul||1)})); const z=(g-mean)/sd; const c=(2*phiN(z)-1)*eff; dii+=c; used++; parts.push(['food:'+key,c,z])});
+  return {dii,used,parts,keys}}
 function dayIndices(entries,t){const out={};
   /* GI und glykämische Last */
-  let cKnown=0,cAll=0,giSum=0;
-  entries.forEach(e=>entryParts(e).forEach(p=>{const ch=(p.per[2]||0)*p.g/100; if(ch<=0.5)return; cAll+=ch; const gi=(p.per[2]||0)>=3?giOfName(p.name):null; if(gi!=null){cKnown+=ch; giSum+=gi*ch}}));
-  if(cKnown>0){out.gi=giSum/cKnown; out.gl=out.gi*(t[2]||0)/100; out.giCov=cAll?cKnown/cAll:0}
+  let cKnown=0,cAll=0,giSum=0; const giL=[],noGi=[];
+  entries.forEach(e=>{let ch=0,chK=0,gs=0; entryParts(e).forEach(p=>{const c=(p.per[2]||0)*p.g/100; if(c<=0.5)return; ch+=c; const gi=(p.per[2]||0)>=3?giOfName(p.name):null; if(gi!=null){chK+=c; gs+=gi*c}});
+    cAll+=ch; cKnown+=chK; giSum+=gs; if(chK>0)giL.push({name:e.name,ch:chK,gs}); if(ch-chK>=5)noGi.push({name:e.name,ch:ch-chK})});
+  if(cKnown>0){out.gi=giSum/cKnown; out.gl=out.gi*(t[2]||0)/100; out.giCov=cAll?cKnown/cAll:0;
+    out.giList=byName(giL,['ch','gs']).map(o=>({...o,gi:o.gs/o.ch,gl:o.gs/100})); out.noGi=byName(noGi,['ch']).sort((a,b)=>b.ch-a.ch)}
   /* Proteinqualität: Aminosäure-Score nach FAO/WHO 2007 (mg je g Eiweiß), ähnlich der biologischen Wertigkeit */
   const REFAA={his:15,ile:30,leu:59,lys:45,metcys:22,phetyr:38,thr:23,trp:6,val:39};
-  let pCov=0; const aa={}; AA.forEach(k=>aa[k]=0);
-  entries.forEach(e=>{if(AA.every(k=>e.n[IDX[k]]!=null)&&e.n[1]>0){pCov+=e.n[1]; AA.forEach(k=>aa[k]+=e.n[IDX[k]])}});
-  if(pCov>=5){const per={his:aa.his,ile:aa.ile,leu:aa.leu,lys:aa.lys,metcys:aa.met+aa.cys,phetyr:aa.phe+aa.tyr,thr:aa.thr,trp:aa.trp,val:aa.val};
+  const aaOf=n=>({his:n[IDX.his],ile:n[IDX.ile],leu:n[IDX.leu],lys:n[IDX.lys],metcys:n[IDX.met]+n[IDX.cys],phetyr:n[IDX.phe]+n[IDX.tyr],thr:n[IDX.thr],trp:n[IDX.trp],val:n[IDX.val]});
+  let pCov=0; const aa={}; AA.forEach(k=>aa[k]=0); const pL=[];
+  entries.forEach(e=>{if(AA.every(k=>e.n[IDX[k]]!=null)&&e.n[1]>0){pCov+=e.n[1]; AA.forEach(k=>aa[k]+=e.n[IDX[k]]); pL.push({name:e.name,prot:e.n[1],n:e.n})}});
+  if(pCov>=5){const per=aaOf(AA.reduce((n,k)=>(n[IDX[k]]=aa[k],n),zero()));
     const sc=Object.entries(REFAA).map(([k,r])=>[k,per[k]*1000/pCov/r]).sort((a,b)=>a[1]-b[1]);
     const NAMES={his:'Histidin',ile:'Isoleucin',leu:'Leucin',lys:'Lysin',metcys:'Methionin + Cystein',phetyr:'Phenylalanin + Tyrosin',thr:'Threonin',trp:'Tryptophan',val:'Valin'};
-    out.aas=sc[0][1]*100; out.aasLim=NAMES[sc[0][0]]; out.aasCov=t[1]>0?pCov/t[1]:0}
+    out.aas=sc[0][1]*100; out.aasLim=NAMES[sc[0][0]]; out.aasLimK=sc[0][0]; out.aasCov=t[1]>0?pCov/t[1]:0;
+    /* je Lebensmittel: eigener Score (knappste Aminosäure) und Wert für die heute knappste */
+    const lim=sc[0][0];
+    out.protList=byName(pL.map(o=>({name:o.name,prot:o.prot,aaN:o.n})),['prot']).map(o=>{const s=aaOf(pL.filter(q=>q.name===o.name).reduce((n,q)=>addTo(n,q.n),zero())), pr=pL.filter(q=>q.name===o.name).reduce((a,q)=>a+q.prot,0);
+      const own=Object.entries(REFAA).map(([k,r])=>[k,s[k]*1000/pr/r]).sort((a,b)=>a[1]-b[1]);
+      return {name:o.name,prot:pr,score:own[0][1]*100,limScore:s[lim]*1000/pr/REFAA[lim]*100}}).sort((a,b)=>b.prot-a.prot)}
   /* ORAC */
-  let orac=0,oKnown=0,gAll=0; entries.forEach(e=>entryParts(e).forEach(p=>{gAll+=p.g; const o=oracOfName(p.name); if(o!=null){orac+=o*p.g/100; oKnown+=p.g}}));
-  if(oKnown>0)out.orac=orac;
-  /* Entzündungsindex (Dietary Inflammatory Index nach Shivappa et al. 2014): Effektwert, weltweiter Mittelwert, Standardabweichung */
-  const DII={kcal:[0.180,2056,338],carb:[0.097,272.2,40],prot:[0.021,79.4,13.9],fat:[0.298,71.4,19.4],sat:[0.373,28.6,8.0],mufa:[-0.009,27.0,6.1],pufa:[-0.337,13.88,3.76],n3:[-0.436,1.06,1.06],n6:[-0.159,10.80,7.50],fib:[-0.663,18.8,4.9],chol:[0.110,279.4,51.2],vA:[-0.401,983.9,518.6],bcar:[-0.584,3718,1720],vC:[-0.424,118.2,43.46],vD:[-0.446,6.26,2.21],vE:[-0.419,8.73,1.49],b1:[-0.098,1.70,0.66],b2:[-0.068,1.70,0.79],b3:[-0.246,25.90,11.77],b6:[-0.365,1.47,0.74],b12:[0.106,5.15,2.70],fol:[-0.190,273.0,70.7],fe:[0.032,13.35,3.71],mg:[-0.484,310.1,139.4],zn:[-0.313,9.84,2.19],se:[-0.191,67.0,25.1]};
-  const FOODP={onion:[['zwiebel'],-0.301,35.9,18.4],garlic:[['knoblauch'],-0.412,4.35,2.90],ginger:[['ingwer'],-0.453,59.0,63.2],turmeric:[['kurkuma'],-0.785,533.6,754.3,1000],tea:[['grunter tee','schwarzer tee','gruner tee','schwarztee','tee'],-0.536,1.69,1.53,0.008]};
-  const phi=z=>{const tt=1/(1+0.3275911*Math.abs(z)/Math.SQRT2); const y=1-(((((1.061405429*tt-1.453152027)*tt)+1.421413741)*tt-0.284496736)*tt+0.254829592)*tt*Math.exp(-z*z/2); return 0.5*(1+(z<0?-y:y))};
-  let dii=0,used=0; const parts=[];
-  if(entries.length){Object.entries(DII).forEach(([k,[eff,mean,sd]])=>{if(covOf(entries,k)<0.7)return; const z=((t[IDX[k]]||0)-mean)/sd; const c=(2*phi(z)-1)*eff; dii+=c; used++; parts.push([k,c,z])});
-    Object.entries(FOODP).forEach(([key,[kw,eff,mean,sd,mul]])=>{let g=0; entries.forEach(e=>entryParts(e).forEach(p=>{const n=phon(p.name); if(kw.some(w=>n.includes(phon(w))))g+=p.g*(mul||1)})); const z=(g-mean)/sd; dii+=(2*phi(z)-1)*eff; used++});
-    out.dii=dii; out.diiN=used; out.diiTop=parts.sort((a,b)=>b[1]-a[1])}
+  let orac=0,oKnown=0; const oL=[]; entries.forEach(e=>{let o2=0; entryParts(e).forEach(p=>{const o=oracOfName(p.name); if(o!=null){o2+=o*p.g/100; oKnown+=p.g}}); orac+=o2; if(o2>0)oL.push({name:e.name,o:o2})});
+  if(oKnown>0){out.orac=orac; out.oracList=byName(oL,['o']).sort((a,b)=>b.o-a.o)}
+  /* Entzündungsindex */
+  if(entries.length){const r=diiCalc(entries,t); out.dii=r.dii; out.diiN=r.used; out.diiTop=r.parts.sort((a,b)=>b[1]-a[1]);
+    /* Wirkung je Lebensmittel: Wert mit minus Wert ohne diesen Eintrag (gleiche Nährstoffliste) */
+    const dl=entries.map((e,i)=>{const rest=entries.filter((_,j)=>j!==i); const t2=t.map((v,k)=>(v||0)-(e.n[k]||0)); return {name:e.name,d:r.dii-diiCalc(rest,t2,r.keys).dii}});
+    out.diiFoods=byName(dl,['d']).sort((a,b)=>b.d-a.d)}
   return out}
-function idxRow(title,valHtml,hint,pct,color,div){return `<div class="stack" style="gap:4px"><div class="row" style="justify-content:space-between;align-items:baseline"><span>${title}</span>${valHtml}</div>${pct!=null?(typeof div==='string'?div:div?divScale(pct,color):bar(pct,color)):''}<div class="tiny muted">${hint}</div></div>`}
+/* Was steckt viel drin (für Tipps) */
+const NUT_TIP={bcar:'Karotten, Süßkartoffel, Spinat, Grünkohl, Paprika',mg:'Haferflocken, Nüsse, Kerne, Vollkornbrot, Bohnen',fib:'Vollkorn, Haferflocken, Bohnen/Linsen, Gemüse, Obst',vC:'Paprika, Kiwi, Orange, Brokkoli',vE:'Nüsse, Sonnenblumenkerne, Rapsöl',vD:'Lachs, Hering, Eier (und Sonne)',vA:'Karotten, Spinat, Süßkartoffel',n3:'Lachs, Walnüsse, Leinsamen, Rapsöl',pufa:'Walnüsse, Rapsöl, Sonnenblumenkerne',n6:'Sonnenblumenkerne, Nüsse',b6:'Hähnchen, Banane, Kartoffeln, Kichererbsen',b3:'Hähnchen, Thunfisch, Erdnüsse',zn:'Haferflocken, Kerne, Rindfleisch, Käse',fol:'Salat, Spinat, Brokkoli, Linsen',se:'Paranüsse, Fisch, Eier',b1:'Vollkorn, Haferflocken, Bohnen',b2:'Milch, Joghurt, Eier',mufa:'Olivenöl, Nüsse, Avocado','food:tea':'eine Tasse grüner oder schwarzer Tee','food:onion':'Zwiebeln beim Kochen','food:garlic':'eine Zehe Knoblauch beim Kochen','food:ginger':'Ingwer als Tee oder im Essen','food:turmeric':'eine Prise Kurkuma beim Kochen'};
+const NUT_LESS={sat:'weniger Butter, Sahne, fettes Fleisch, Wurst, Käse und Gebäck',fat:'weniger Frittiertes und fette Soßen',kcal:'Das kommt einfach von der großen Essensmenge, für Muskelaufbau ist das in Ordnung.',carb:'Weißmehl und Zucker durch Vollkorn ersetzen',chol:'weniger Eigelb, Wurst und Innereien',b12:'kommt von Fleisch/Milch und ist kein Problem',fe:'kein Grund zur Sorge',prot:'kein Grund zur Sorge, Eiweiß brauchst du'};
+const AA_TIP={lys:'Milchprodukte, Fleisch, Fisch, Eier, Bohnen/Linsen',metcys:'Eier, Fisch, Hähnchen, Haferflocken, Nüsse',trp:'Milch, Haferflocken, Kerne, Hähnchen',thr:'Fleisch, Fisch, Milch, Linsen',his:'Fleisch, Fisch, Milchprodukte',ile:'Fleisch, Fisch, Eier, Milch',leu:'Milchprodukte, Fleisch, Eier',val:'Milchprodukte, Fleisch, Eier',phetyr:'Milchprodukte, Fleisch, Eier, Nüsse'};
+function idxRow(title,valHtml,hint,pct,color,div,why){return `<div class="stack" style="gap:4px"><div class="row" style="justify-content:space-between;align-items:baseline"><span>${title}</span>${valHtml}</div>${pct!=null?(typeof div==='string'?div:div?divScale(pct,color):bar(pct,color)):''}<div class="tiny muted">${hint}</div>${why||''}</div>`}
+/* Aufklappbare Begründung unter einem Qualitätswert */
+function whyBox(key,parts){const body=parts.filter(Boolean).join(''); if(!body)return '';
+  return `<details class="why" data-why="${key}"${UI.whyOpen&&UI.whyOpen[key]?' open':''}><summary>Warum ist der Wert so?</summary><div class="whyb">${body}</div></details>`}
+const whyP=(label,txt)=>txt?`<p>${label?`<b>${label}</b> `:''}${txt}</p>`:'';
+const whyL=(label,items)=>items.length?`<p><b>${label}</b></p><ul>${items.map(s=>`<li>${s}</li>`).join('')}</ul>`:'';
 function indicesCard(entries,t){const x=dayIndices(entries,t); if(!entries.length)return '';
   const giC=x.gi==null?'':x.gi<=55?'var(--good)':x.gi<70?'var(--warn)':'var(--low)';
   const glC=x.gl==null?'':x.gl<80?'var(--good)':x.gl<=120?'var(--warn)':'var(--low)';
   const diiTxt=x.dii==null?'':x.dii<=-1?'entzündungshemmend':x.dii<1?'neutral':'eher entzündungsfördernd';
   const diiC=x.dii==null?'':x.dii<=-1?'var(--good)':x.dii<1?'var(--warn)':'var(--low)';
-  const N=k=>NI[k]?NI[k][0]:k;
+  const N=k=>k.startsWith('food:')?DII_FOODN[k.slice(5)]:NI[k]?NI[k][0]:k;
+  const nm=s=>esc(s);
+  const g0=v=>fmt(Math.round(v));
+  const early=UI.date===today()&&new Date().getHours()<18;
+  /* GI */
+  let giWhy='';
+  if(x.gi!=null){const L=x.giList||[]; const hi=L.filter(o=>o.gi>Math.max(55,x.gi)).sort((a,b)=>b.gi*b.ch-a.gi*a.ch).slice(0,3), lo=L.filter(o=>o.gi<Math.min(55,x.gi)).sort((a,b)=>b.ch-a.ch).slice(0,3);
+    giWhy=whyBox('gi',[whyP('Was ist das?','Der GI sagt, wie schnell Kohlenhydrate deinen Blutzucker steigen lassen. Traubenzucker hat 100. Hier ist es der Durchschnitt über alles, was du heute gegessen hast: Lebensmittel mit vielen Kohlenhydraten zählen stärker.'),
+      whyL('Treibt hoch:',hi.map(o=>`${nm(o.name)}: GI ${g0(o.gi)}, ${g0(o.ch)} g Kohlenhydrate`)),
+      whyL('Senkt:',lo.map(o=>`${nm(o.name)}: GI ${g0(o.gi)}, ${g0(o.ch)} g Kohlenhydrate`)),
+      x.noGi&&x.noGi.length?whyP('Ohne GI-Wert, darum nicht mitgezählt:',x.noGi.slice(0,4).map(o=>nm(o.name)).join(', ')+'.'):'',
+      x.gi>55?whyP('Was hilft:','Vollkornbrot statt Weißbrot oder Toast, Haferflocken statt Cornflakes, Nudeln bissfest, mehr Bohnen und Linsen. Eiweiß, Fett oder Gemüse dazu macht den Anstieg langsamer.'):whyP('','Gut so. Nach dem Training ist ein höherer GI übrigens kein Problem.')])}
+  /* GL */
+  let glWhy='';
+  if(x.gl!=null){const L=(x.giList||[]).slice().sort((a,b)=>b.gl-a.gl).slice(0,4);
+    glWhy=whyBox('gl',[whyP('Was ist das?','Die glykämische Last ist GI mal Menge: Sie zeigt, wie stark dein Blutzucker heute insgesamt belastet wird. Viel essen heißt also auch mehr Last. Für Muskelaufbau mit vielen Kohlenhydraten ist ein mittlerer Wert normal.'),
+      whyL('Am meisten Last bringen:',L.map(o=>`${nm(o.name)}: ${g0(o.gl)} (${g0(o.ch)} g Kohlenhydrate, GI ${g0(o.gi)})`)),
+      x.gl>=80?whyP('Was hilft:','Nicht weniger essen, sondern tauschen: Vollkorn, Haferflocken, Hülsenfrüchte und Kartoffeln mit Schale statt Weißbrot, Süßem und Säften.'):''])}
+  /* Proteinqualität */
+  let aasWhy='';
+  if(x.aas!=null){const L=x.protList||[]; const weak=x.aas<100?L.filter(o=>o.limScore<100).sort((a,b)=>b.prot-a.prot).slice(0,3):[];
+    aasWhy=whyBox('aas',[whyP('Was ist das?','Eiweiß besteht aus Bausteinen (Aminosäuren). Neun davon kann der Körper nicht selbst bauen. 100 % heißt: Von jedem dieser neun Bausteine ist genug im Eiweiß drin. Über 100 % ist gut, bringt aber nichts extra. Wie viel Eiweiß du insgesamt isst, ist für Muskeln noch wichtiger.'),
+      whyL('Dein Eiweiß kommt vor allem aus:',L.slice(0,4).map(o=>`${nm(o.name)}: ${g0(o.prot)} g Eiweiß, Qualität ${Math.min(999,Math.round(o.score))} %`)),
+      weak.length?whyL(`Wenig ${x.aasLim} haben:`,weak.map(o=>`${nm(o.name)} (${Math.round(o.limScore)} %)`)):'',
+      x.aas<100?whyP('Was hilft:',`Mehr ${x.aasLim} gibt es in ${AA_TIP[x.aasLimK]||'Milchprodukten, Fleisch, Eiern'}. Mischen hilft auch: Brot mit Käse, Reis mit Bohnen, Kartoffeln mit Ei.`):whyP('','Passt. Die Mischung deiner Eiweißquellen deckt alle Bausteine.'),
+      x.aasCov<0.9?whyP('',`Nur ${Math.round(x.aasCov*100)} % deines Eiweißes haben Daten zu den Bausteinen, der Rest ist nicht mitgezählt.`):''])}
+  /* DII */
+  let diiWhy='', diiShort='';
+  if(x.dii!=null){const top=x.diiTop||[]; const up=top.filter(p=>p[1]>0.1), dn=top.filter(p=>p[1]<-0.1).reverse();
+    const lab=p=>(p[2]<0?'wenig ':'viel ')+N(p[0]);
+    const upMiss=up.filter(p=>p[2]<0).slice(0,4), upMuch=up.filter(p=>p[2]>=0).slice(0,3);
+    const fUp=(x.diiFoods||[]).filter(o=>o.d>0.05).slice(0,3), fDn=(x.diiFoods||[]).filter(o=>o.d<-0.05).reverse().slice(0,3);
+    const sum=s=>s.reduce((a,p)=>a+p[1],0);
+    diiShort=up.length?' Treibt hoch: '+up.slice(0,2).map(lab).join(', ')+'.':'';
+    diiWhy=whyBox('dii',[whyP('Was ist das?','Gemeint ist keine Wunde, sondern eine stille, dauerhafte Entzündung im Körper. Der Wert schätzt, ob dein Essen sie eher fördert (Plus) oder bremst (Minus). Gemüse, Obst, Vollkorn, Nüsse, Fisch, Tee und Gewürze bremsen sie. Viel gesättigtes Fett, Weißmehl, Zucker und sehr viel Essen fördern sie.'),
+      whyP('Wie wird gerechnet?','Für 26 Nährstoffe und 5 Lebensmittel wird deine Tagesmenge mit einem durchschnittlichen Tag verglichen. Wenig von etwas Gutem zählt also genauso ins Plus wie viel von etwas Ungünstigem.'),
+      upMiss.length?whyL(`Dein Plus kommt vor allem von dem, was fehlt (zusammen +${fmt(Math.round(sum(up.filter(p=>p[2]<0))*10)/10)}):`,upMiss.map(p=>`wenig ${N(p[0])}${NUT_TIP[p[0]]?` <span class="muted">· ${p[0].startsWith('food:')?'z. B. '+NUT_TIP[p[0]]:'steckt z. B. in '+NUT_TIP[p[0]]}</span>`:''}`)):'',
+      upMuch.length?whyL(`Zu viel davon (zusammen +${fmt(Math.round(sum(up.filter(p=>p[2]>=0))*10)/10)}):`,upMuch.map(p=>`viel ${N(p[0])}${NUT_LESS[p[0]]?` <span class="muted">· ${NUT_LESS[p[0]]}</span>`:''}`)):'',
+      fUp.length?whyL('Diese Einträge treiben den Wert hoch:',fUp.map(o=>`${nm(o.name)} <span class="muted">(+${fmt(Math.round(o.d*10)/10)})</span>`)):'',
+      !fUp.length&&upMiss.length?whyP('','Kein Eintrag treibt den Wert nach oben. Das Plus kommt nur von dem, was noch fehlt.'):'',
+      fDn.length?whyL('Diese Einträge senken den Wert:',fDn.map(o=>`${nm(o.name)} <span class="muted">(−${fmt(Math.round(-o.d*10)/10)})</span>`)):'',
+      dn.length?whyP('Hilft schon:',dn.slice(0,3).map(lab).join(', ')+'.'):'',
+      early&&x.dii>0?whyP('Wichtig:','Es ist noch nicht Abend. Weil der Wert mit dem ganzen Tag rechnet, fehlt morgens und mittags fast alles, und er ist darum hoch. Mit den nächsten Mahlzeiten sinkt er meist deutlich.'):'',
+      upMiss.length?whyP('Was hilft:',`Eine Portion Gemüse oder Salat, ein Stück Obst, eine Handvoll Nüsse oder Haferflocken. Am meisten bringt gerade: ${upMiss.slice(0,2).map(p=>NUT_TIP[p[0]]||N(p[0])).join('; ')}.`):''])}
+  /* ORAC */
+  let oracWhy='';
+  if(x.orac!=null){const L=(x.oracList||[]).slice(0,4);
+    oracWhy=whyBox('orac',[whyP('Was ist das?','ORAC misst im Reagenzglas, wie stark ein Lebensmittel sogenannte freie Radikale abfängt (Antioxidantien). Höher ist besser, aber im Körper wirkt das viel schwächer. Als grober Hinweis auf bunte Pflanzenkost taugt es trotzdem.'),
+      whyL('Am meisten bringen:',L.map(o=>`${nm(o.name)}: ${Math.round(o.o).toLocaleString('de-DE')}`)),
+      whyP('Was hilft:','Beeren, Nüsse, Kakao oder dunkle Schokolade, Äpfel, Tee und Gewürze wie Zimt, Kurkuma und Oregano.')])}
   return `<section class="card stack" style="gap:14px"><div class="row" style="justify-content:space-between"><h2>Qualität</h2><span class="tiny muted">heute</span></div>
-   ${x.gi!=null?idxRow('Glykämischer Index',`<b class="num" style="color:${giC}">${Math.round(x.gi)}</b>`,`${x.gi<=55?'niedrig':x.gi<70?'mittel':'hoch'} (bis 55 niedrig, ab 70 hoch)`,0,giC,zoneScale(x.gi,100,55,70,giC)):idxRow('Glykämischer Index','<span class="muted">–</span>','Für die heutigen Kohlenhydrate ist noch kein GI-Richtwert bekannt.')}
-   ${x.gl!=null?idxRow('Glykämische Last',`<b class="num" style="color:${glC}">${Math.round(x.gl)}</b>`,`${x.gl<80?'niedrig':x.gl<=120?'mittel':'hoch'} (unter 80 niedrig, über 120 hoch)${x.giCov<0.9?' · GI bekannt für '+Math.round(x.giCov*100)+' % der Kohlenhydrate':''}`,0,glC,zoneScale(x.gl,200,80,120,glC)):''}
-   ${x.aas!=null?idxRow('Proteinqualität',`<b class="num" style="color:${x.aas>=100?'var(--good)':x.aas>=75?'var(--warn)':'var(--low)'}">${Math.min(999,Math.round(x.aas))} %</b>`,`Aminosäure-Score (FAO/WHO), ähnlich der biologischen Wertigkeit: Wie gut dein Eiweiß zusammen die unentbehrlichen Aminosäuren deckt. ${x.aas>=100?'Alles gedeckt.':'Am knappsten: '+x.aasLim+'.'}${x.aasCov<0.9?' Berechnet aus '+Math.round(x.aasCov*100)+' % deines Eiweißes.':''}`,Math.min(100,x.aas),x.aas>=100?'var(--good)':x.aas>=75?'var(--warn)':'var(--low)'):idxRow('Proteinqualität','<span class="muted">–</span>','Braucht Lebensmittel mit Aminosäure-Daten (BLS oder USDA).')}
-   ${x.dii!=null?idxRow('Entzündungsindex (DII)',`<b class="num" style="color:${diiC}">${x.dii>0?'+':''}${fmt(Math.round(x.dii*10)/10)}</b>`,`${diiTxt}. Skala etwa −8 (stark entzündungshemmend) bis +8. Berechnet aus ${x.diiN} von 45 Bestandteilen (Shivappa 2014), Alkohol bewusst nicht mitgezählt.${(()=>{const up=(x.diiTop||[]).filter(p=>p[1]>0.05).slice(0,2).map(p=>(p[2]<0?'wenig ':'viel ')+N(p[0])), dn=(x.diiTop||[]).filter(p=>p[1]<-0.05).slice(-2).reverse().map(p=>(p[2]<0?'wenig ':'viel ')+N(p[0])); return (up.length?' Treibt hoch: '+up.join(', ')+'.':'')+(dn.length?' Senkt: '+dn.join(', ')+'.':'')})()}${UI.date===today()&&new Date().getHours()<18?' Tagsüber noch vorläufig, weil der Wert mit ganzen Tagen rechnet.':''}`,(Math.max(-8,Math.min(8,x.dii))+8)/16*100,diiC,true):''}
-   ${x.orac!=null?idxRow('ORAC (Antioxidantien)',`<b class="num">${Math.round(x.orac).toLocaleString('de-DE')}</b>`,'µmol TE, grob geschätzt aus USDA-Werten. Die USDA hat diese Werte 2012 zurückgezogen, weil sie nicht zeigen, was im Körper wirkt. Nur zur Orientierung.',null):idxRow('ORAC (Antioxidantien)','<span class="muted">–</span>','Kein Lebensmittel mit ORAC-Richtwert eingetragen (z. B. Beeren, Nüsse, Gewürze, Kakao).')}
+   ${x.gi!=null?idxRow('Glykämischer Index',`<b class="num" style="color:${giC}">${Math.round(x.gi)}</b>`,`${x.gi<=55?'niedrig':x.gi<70?'mittel':'hoch'} (bis 55 niedrig, ab 70 hoch)`,0,giC,zoneScale(x.gi,100,55,70,giC),giWhy):idxRow('Glykämischer Index','<span class="muted">–</span>','Für die heutigen Kohlenhydrate ist noch kein GI-Richtwert bekannt.')}
+   ${x.gl!=null?idxRow('Glykämische Last',`<b class="num" style="color:${glC}">${Math.round(x.gl)}</b>`,`${x.gl<80?'niedrig':x.gl<=120?'mittel':'hoch'} (unter 80 niedrig, über 120 hoch)${x.giCov<0.9?' · GI bekannt für '+Math.round(x.giCov*100)+' % der Kohlenhydrate':''}`,0,glC,zoneScale(x.gl,200,80,120,glC),glWhy):''}
+   ${x.aas!=null?idxRow('Proteinqualität',`<b class="num" style="color:${x.aas>=100?'var(--good)':x.aas>=75?'var(--warn)':'var(--low)'}">${Math.min(999,Math.round(x.aas))} %</b>`,`Wie gut dein Eiweiß alle unentbehrlichen Bausteine deckt (Aminosäure-Score, ähnlich der biologischen Wertigkeit). ${x.aas>=100?'Alles gedeckt.':'Am knappsten: '+x.aasLim+'.'}`,Math.min(100,x.aas),x.aas>=100?'var(--good)':x.aas>=75?'var(--warn)':'var(--low)',false,aasWhy):idxRow('Proteinqualität','<span class="muted">–</span>','Braucht Lebensmittel mit Aminosäure-Daten (BLS oder USDA).')}
+   ${x.dii!=null?idxRow('Entzündungsindex (DII)',`<b class="num" style="color:${diiC}">${x.dii>0?'+':''}${fmt(Math.round(x.dii*10)/10)}</b>`,`${diiTxt}. Skala etwa −8 (bremst Entzündungen) bis +8 (fördert sie).${diiShort}${early?' Tagsüber noch vorläufig.':''}`,(Math.max(-8,Math.min(8,x.dii))+8)/16*100,diiC,true,diiWhy):''}
+   ${x.orac!=null?idxRow('ORAC (Antioxidantien)',`<b class="num">${Math.round(x.orac).toLocaleString('de-DE')}</b>`,'µmol TE, grob geschätzt aus alten USDA-Werten. Nur zur Orientierung.',null,null,null,oracWhy):idxRow('ORAC (Antioxidantien)','<span class="muted">–</span>','Kein Lebensmittel mit ORAC-Richtwert eingetragen (z. B. Beeren, Nüsse, Gewürze, Kakao).')}
   </section>`}
 /* Nährwertangaben wie auf der Packung (Big 8 + Fettqualität) */
 function factsCard(entries,t){if(!entries.length)return ''; const kc=t[0]||1; const pe=(g,f)=>g*f/kc*100;
@@ -791,13 +868,15 @@ function waterCard(d){const w=(S.body[d]&&S.body[d].water)||0, total=S.settings.
    <div class="row wrapr"><button class="sm" data-act="water" data-ml="250">+ Glas 250 ml</button><button class="sm" data-act="water" data-ml="500">+ Flasche 500 ml</button><button class="sm" data-act="water" data-ml="-250" ${w?'':'disabled'} aria-label="250 ml abziehen">− 250</button></div>${suppBtn(d)}</section>`}
 function bodyInputs(bd){return `<div class="field"><label for="b-burn">Aktivkalorien</label><input id="b-burn" type="number" inputmode="numeric" min="0" placeholder="kcal" value="${bd.burn??''}"></div><div class="field"><label for="b-w">Gewicht</label><input id="b-w" type="number" inputmode="decimal" step="0.1" min="0" placeholder="kg" value="${bd.w??''}"></div>`}
 function barR(p,lo,hi,color){const c=v=>Math.min(100,Math.max(0,v)); return `<div class="progress rg" title="Geschätzte Spanne"><b style="left:${c(lo)}%;width:${Math.max(1.5,c(hi)-c(lo))}%;background:${color}"></b><i style="width:${c(p)}%;background:${color}"></i></div>`}
-function divScale(p,color){const x=Math.min(98,Math.max(2,p)); return `<div style="position:relative;height:10px;border-radius:6px;background:linear-gradient(90deg,var(--good),color-mix(in srgb,var(--good) 25%,var(--warn)) 40%,var(--warn) 50%,color-mix(in srgb,var(--low) 40%,var(--warn)) 60%,var(--low));opacity:.9"><span style="position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--text,#fff);opacity:.35"></span><span style="position:absolute;left:${x}%;top:50%;width:14px;height:14px;transform:translate(-50%,-50%);border-radius:50%;background:${color};border:2px solid var(--bg,#111);box-shadow:0 0 0 1.5px ${color}"></span></div><div class="tiny muted" style="display:grid;grid-template-columns:1fr auto 1fr;margin-top:2px"><span>hemmend −8</span><span>0</span><span style="text-align:right">+8 fördernd</span></div>`}
-/* Skala mit drei Zonen (niedrig/mittel/hoch) und Markierung des aktuellen Werts, z. B. GI und glykämische Last */
-function zoneScale(v,max,a,b,color){const p=x=>Math.min(100,Math.max(0,x/max*100)), pa=p(a), pb=p(b), m=Math.min(98,Math.max(2,p(v)));
-  const seg=(l,w,c)=>`<span style="position:absolute;left:${l}%;width:${w}%;top:0;bottom:0;background:${c};opacity:.45"></span>`;
-  const tick=x=>`<span style="position:absolute;left:${x}%;top:-2px;bottom:-2px;width:2px;transform:translateX(-50%);background:var(--bg,#111)"></span>`;
-  const lab=(x,t,al)=>`<span style="position:absolute;left:${x}%;transform:translateX(${al})">${t}</span>`;
-  return `<div style="position:relative;height:10px;border-radius:6px;overflow:visible"><div style="position:absolute;inset:0;border-radius:6px;overflow:hidden">${seg(0,pa,'var(--good)')}${seg(pa,pb-pa,'var(--warn)')}${seg(pb,100-pb,'var(--low)')}</div>${tick(pa)}${tick(pb)}<span style="position:absolute;left:${m}%;top:50%;width:14px;height:14px;transform:translate(-50%,-50%);border-radius:50%;background:${color};border:2px solid var(--bg,#111);box-shadow:0 0 0 1.5px ${color}"></span></div><div class="tiny muted" style="position:relative;height:1.3em;margin-top:2px">${lab(0,'niedrig','0')}${lab(pa,a,'-50%')}${lab(pb,b,'-50%')}<span style="position:absolute;right:0">hoch</span></div>`}
+/* Einheitliche Skala für GI, glykämische Last und DII: weicher Farbverlauf grün → gelb → rot, feine Trennstriche, runder Punkt für den aktuellen Wert */
+function scaleBar(stops,ticks,pct,color,labels){const x=Math.min(98,Math.max(2,pct));
+  return `<div style="position:relative;height:10px;border-radius:6px;background:linear-gradient(90deg,${stops});opacity:.9">${ticks.map(t=>`<span style="position:absolute;left:${t}%;top:-2px;bottom:-2px;width:1px;background:var(--text,#fff);opacity:.35"></span>`).join('')}<span style="position:absolute;left:${x}%;top:50%;width:14px;height:14px;transform:translate(-50%,-50%);border-radius:50%;background:${color};border:2px solid var(--bg,#111);box-shadow:0 0 0 1.5px ${color}"></span></div><div class="tiny muted" style="position:relative;height:1.3em;margin-top:2px">${labels}</div>`}
+const scLab=(x,t)=>`<span style="position:absolute;white-space:nowrap;left:${x}%;transform:translateX(${x<=0?'0':x>=100?'-100%':'-50%'})">${t}</span>`;
+function divScale(p,color){return scaleBar('var(--good),color-mix(in srgb,var(--good) 25%,var(--warn)) 40%,var(--warn) 50%,color-mix(in srgb,var(--low) 40%,var(--warn)) 60%,var(--low)',[50],p,color,scLab(0,'hemmend −8')+scLab(50,'0')+scLab(100,'+8 fördernd'))}
+/* Drei Zonen (niedrig/mittel/hoch) mit Grenzen a und b auf einer Skala von 0 bis max */
+function zoneScale(v,max,a,b,color){const p=x=>Math.min(100,Math.max(0,x/max*100)), pa=p(a), pb=p(b), r=n=>Math.round(n*10)/10;
+  const stops=`var(--good),var(--good) ${r(pa*0.6)}%,color-mix(in srgb,var(--good) 30%,var(--warn)) ${r(pa)}%,var(--warn) ${r((pa+pb)/2)}%,color-mix(in srgb,var(--low) 45%,var(--warn)) ${r(pb)}%,var(--low) ${r(pb+(100-pb)*0.4)}%,var(--low)`;
+  return scaleBar(stops,[pa,pb],p(v),color,scLab(0,'niedrig')+scLab(pa,a)+scLab(pb,b)+scLab(100,'hoch'))}
 function bar(p,color){return `<div class="progress"><i style="width:${Math.min(100,Math.max(0,p))}%;background:${color}"></i></div>`}
 function microColor(p){return p>=100?'var(--good)':p>=60?'var(--warn)':'var(--low)'}
 
@@ -2604,7 +2683,7 @@ async function checkUpdate(force){const U=updater(); if(!U||updBusy)return; if(A
   catch(e){say('Update fehlgeschlagen: '+(e&&e.message||e))}finally{updBusy=false; if(UI.tab==='mehr')render()}}
 (function(){const U=updater(); if(U){try{U.notifyAppReady()}catch(e){} setTimeout(()=>checkUpdate(true),3000); document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkUpdate(false)})}})();
 (function(){const P=LN(); if(P){try{P.addListener('localNotificationActionPerformed',a=>{const m=a&&a.notification&&a.notification.extra&&a.notification.extra.meal; UI.date=today(); if(m){UI.meal=m; UI.tab='add'; UI.focusQ=true} else UI.tab='heute'; render()})}catch(e){}}})();
-document.addEventListener('toggle',ev=>{const t=ev.target; if(t.classList&&t.classList.contains('mrow')){if(t.open)UI.openMeal=t.dataset.meal; else if(UI.openMeal===t.dataset.meal)UI.openMeal=null}},true);
+document.addEventListener('toggle',ev=>{const t=ev.target; if(t.classList&&t.classList.contains('why')){UI.whyOpen=UI.whyOpen||{}; UI.whyOpen[t.dataset.why]=t.open} if(t.classList&&t.classList.contains('mrow')){if(t.open)UI.openMeal=t.dataset.meal; else if(UI.openMeal===t.dataset.meal)UI.openMeal=null}},true);
 loadLocal(); UI.lastToday=today(); render(); connectCloud(); if(haOn()&&haDue())setTimeout(()=>haSync(false),1200); if(S.settings.hcSync)setTimeout(()=>syncHealth(false),800);
 </script>
 
