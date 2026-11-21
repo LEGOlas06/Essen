@@ -982,7 +982,7 @@ const PK=new Map(); function pkey(s){let k=PK.get(s); if(k===undefined){k=' '+ph
 function fuzzyHit(key,alts){const toks=key.trim().split(' '); return alts.some(a=>{if(a.length<4)return false; const m=a.length>=8?2:1; return toks.some(t=>t.length>=3&&(lev(t.slice(0,a.length),a,m)<=m||lev(t,a,m)<=m))})}
 /* Rang: 0 = Name beginnt damit, 1 = enthalten, 2 = Synonym, 3 = unscharf (Tippfehler); -1 = kein Treffer */
 function matchRank(text,ws,fuzzy,extra){if(extra){const r=matchRank(text,ws,fuzzy); if(r>=0)return r; const r2=matchRank(text+' '+extra,ws,fuzzy); return r2<0?-1:r2+0.6}
-  const key=pkey(text); let r=key.startsWith(' '+ws[0][0])?0:1;
+  const key=pkey(text); let r=key.startsWith(' '+ws[0][0])?(/^[a-z0-9äöüß]/.test(key.charAt(ws[0][0].length+1))?0.2:0):1;
   for(const alts of ws){if(key.includes(' '+alts[0]))continue; if(key.includes(alts[0])){r=Math.max(r,1.5);continue} if(alts.slice(1).some(a=>key.includes(a))){r=Math.max(r,2);continue} if(fuzzy&&fuzzyHit(key,alts)){r=3;continue} return -1}
   return r}
 /* ---------- Gerichte, die die App in Zutaten zerlegt (Mengen je Portion, typische Werte) ---------- */
@@ -1012,6 +1012,11 @@ const DISH=[
  ['Müsli mit Joghurt','müsli joghurt joghurtmüsli',[['muesli',50],['joghurt',150],['beeren',50]]],
  ['Müsli mit Apfel','müsli apfel apfelmüsli müsli mit apfel und milch',[['muesli',60],['milch',200],['apfel',100]]],
  ['Müsli mit Apfel und Joghurt','müsli apfel joghurt apfelmüsli joghurtmüsli',[['muesli',50],['joghurt',150],['apfel',100]]],
+ ['Tee (ungesüßt, 1 Tasse)','tee tasse tee ungesüßt ungezuckert schwarztee kräutertee früchtetee',[['blsN630000',250]]],
+ ['Tee mit Zucker (1 Tasse)','tee zucker gezuckert gesüßt tasse',[['blsN630000',250],['zucker',8]]],
+ ['Tee mit Honig (1 Tasse)','tee honig tasse',[['blsN630000',250],['honig',10]]],
+ ['Tee mit Milch (1 Tasse)','tee milch tasse',[['blsN630000',220],['milch',30]]],
+ ['Tee mit Milch und Zucker (1 Tasse)','tee milch zucker tasse',[['blsN630000',220],['milch',30],['zucker',8]]],
  ['Schokoschirmchen','schokoschirmchen schokoladeschirmchen schokoladenschirmchen schirmchen schokolade schokoschirm',[['blsS539900',15]],'Stück'],
  ['Porridge mit Banane','porridge haferbrei banane',[['haferflocken',60],['milch',250],['banane',100],['honig',8]]],
  ['Rührei mit Brot','rührei brot',[['ei',110],['butter',5],['milch',20],['vollkornbrot',60]]],
