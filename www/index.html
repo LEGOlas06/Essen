@@ -115,6 +115,10 @@ h2.sec{font-family:var(--display);font-size:22px;margin:10px 2px -2px}
 .mbody{padding:0 0 8px}
 .wbig{font-family:var(--display);font-size:34px}.glasses{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}.glass{position:relative;background:none;border:0;padding:4px 3px;min-height:0;touch-action:manipulation}.gplus{pointer-events:none}.gplus{position:absolute;left:0;right:0;top:9px;font-weight:800;color:var(--ink);font-size:16px}
 button.chip-streak{cursor:pointer;font:inherit;color:inherit}
+.srcs{display:flex;flex-wrap:wrap;gap:6px}.srcs span{font-size:12.5px;padding:4px 9px;border-radius:99px;background:color-mix(in srgb,var(--good) 18%,var(--surface2));white-space:nowrap}
+details.enut>summary{display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;list-style:none}details.enut>summary::-webkit-details-marker{display:none}
+details.enut .progress i,details.enut .progress b{background:var(--accent)!important}
+details.enut>summary b::after{content:" ▸";color:var(--muted);font-size:.8em}details.enut[open]>summary b::after{content:" ▾"}
 .micro{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px}
 .mi .l{display:flex;justify-content:space-between;font-size:12.5px;gap:6px;margin-bottom:3px}
 .mi .l span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
@@ -958,7 +962,7 @@ function vHeute(si){
   </section>
   ${entries.length?`<h2 class="sec">Nährstoffe</h2>
   <section class="card stack" style="gap:10px"><div class="tiny muted">Am meisten fehlt heute:</div>${gaps.map(([k,p])=>`<div><div class="l row" style="justify-content:space-between"><span class="small">${NI[k][0]}</span><b class="small num">${Math.round(p)} %</b></div>${bar(p,microColor(p))}</div>`).join('')}
-   <button class="sm" data-act="details">${UI.showDetails?'Details ausblenden':'Alle Nährwerte und Qualität ansehen'}</button></section>`:''}
+   <button class="sm" data-act="details">${UI.showDetails?'Details ausblenden':'Alle Nährwerte und Qualität ansehen'}</button><div class="tiny muted">Tipp: Tippe oben einen Eintrag an, dann siehst du unter „Vitamine & Nährstoffe“, was genau drinsteckt.</div></section>`:''}
   ${entries.length&&UI.showDetails?`
   ${factsCard(entries,t)}
   ${indicesCard(entries,t)}
@@ -1510,8 +1514,28 @@ function makeEntry(a,tm){const f=a.unitMode==='g'?a.amt/100:a.amt; const e={id:u
    Die ID bleibt gleich, damit der Home-Assistant-Abgleich den Eintrag als geändert erkennt. */
 function editUnitLabel(u){return u==='g'?'Gramm':u==='ml'?'Milliliter':u==='Stück'?'Stück':'Portionen'}
 function editScaled(e,amt){const f=e.amt>0?amt/e.amt:0; return e.n.map(v=>v==null?null:v*f)}
+/* Was steckt in einem Eintrag? Vitamine, Mineralstoffe, Spurenelemente und weitere Nährwerte,
+   jeweils mit Menge und Anteil am Tagesbedarf (DGE-Referenz). Unbekannte Werte (null) werden nicht als 0 gezeigt. */
+const GOODSRC=15; /* ab 15 % des Tagesbedarfs gilt ein Lebensmittel als „Quelle“ (EU-Regel für Nährwertangaben) */
+function entryNutHtml(e,amt){const f=e.amt>0?amt/e.amt:0; const n=editScaled(e,amt); const ref=REF[S.settings.sex]||REF.m;
+  const known=k=>n[IDX[k]]!=null; const x={n};
+  const rr={hasR:!!e.rng,rl:e.rng?e.rng[0].map(v=>v*f):[],rh:e.rng?e.rng[1].map(v=>v*f):[]};
+  const pct=k=>(n[IDX[k]]||0)/ref[k]*100;
+  const all=[...VITS,...MINS,...TRACE].filter(k=>ref[k]&&known(k));
+  const top=all.map(k=>[k,pct(k)]).filter(([,p])=>p>=GOODSRC).sort((a,b)=>b[1]-a[1]);
+  const grpE=(title,keys)=>{const ks=keys.filter(known); if(!ks.length)return ''; return `<div class="stack" style="gap:8px"><div class="row" style="justify-content:space-between"><b class="small">${title}</b><span class="tiny muted">% vom Tagesbedarf</span></div><div class="micro">${nutriRows(ks,n,[x],ref,rr)}</div></div>`};
+  const miss=all.length?[...VITS,...MINS,...TRACE].filter(k=>!known(k)).map(k=>NI[k][0]):[];
+  const fr=(label,k,sub)=>known(k)?`<div class="fr${sub?' sub':''}"><span>${label}</span><b class="num">${fmt(n[IDX[k]])} ${NI[k][1]}</b></div>`:'';
+  const noData=e.noMicro||!all.length;
+  return `${noData?`<div class="note">Für diesen Eintrag gibt es keine Angaben zu Vitaminen und Mineralstoffen${e.noMicro?' (das Produkt hat nur Packungs-Nährwerte)':''}.</div>`:
+    `<div class="stack" style="gap:6px"><div class="small">${top.length?'Gute Quelle für:':'Kein Vitamin oder Mineralstoff erreicht 15 % vom Tagesbedarf.'}</div>${top.length?`<div class="srcs">${top.slice(0,6).map(([k,p])=>`<span>${NI[k][0]} <b class="num">${Math.round(p)} %</b></span>`).join('')}</div>`:''}<div class="tiny muted">„Gute Quelle“ heißt: Diese Menge deckt mindestens ${GOODSRC} % von dem, was du am Tag brauchst.</div></div>`}
+   <div class="facts">${fr('Ballaststoffe','fib')}${fr('Zucker','sugar')}${fr('gesättigte Fettsäuren','sat')}${fr('Omega-3','n3')}${fr('Salz','salt')}${(n[IDX.chol]||0)>0?fr('Cholesterin','chol'):''}${(n[IDX.alc]||0)>0.5?fr('Alkohol','alc'):''}</div>
+   ${noData?'':grpE('Vitamine',VITS)+grpE('Mineralstoffe',MINS)+grpE('Spurenelemente',TRACE)}
+   ${rr.hasR?'<div class="note">Die Vitamine sind aus den Zutaten geschätzt. Die Zahl mit ≈ zeigt die wahrscheinliche Spanne.</div>':''}
+   ${!noData&&miss.length?`<div class="tiny muted">Keine Daten zu: ${miss.join(', ')}.</div>`:''}
+   <button class="sm" data-act="daynut">Ganzen Tag ansehen (alle Einträge zusammen)</button>`}
 function openEdit(id){const e=(S.days[UI.date]||[]).find(x=>x.id===id); if(!e)return;
-  UI.edit={id,amt:e.amt,meal:e.meal,time:entryTime(e,UI.date)||MEALTIME[e.meal]}; sheetEdit()}
+  UI.edit={id,amt:e.amt,meal:e.meal,time:entryTime(e,UI.date)||MEALTIME[e.meal],nut:!!UI.nutOpen}; sheetEdit()}
 function sheetEdit(){const E=UI.edit; const e=(S.days[UI.date]||[]).find(x=>x.id===E.id); if(!e){closeSheet();return}
   const byG=e.unit==='g'||e.unit==='ml'; const f=byG?getFood(e.ref):null;
   const quick=byG?[...((f&&f.portions)||[]).slice(0,3).map(p=>[p[0]+' ('+p[1]+' '+e.unit+')',p[1]]),['100 '+e.unit,100]]:[['½',0.5],['1',1],['1½',1.5],['2',2],['3',3]];
@@ -1524,9 +1548,12 @@ function sheetEdit(){const E=UI.edit; const e=(S.days[UI.date]||[]).find(x=>x.id
    <div class="seg" role="group" aria-label="Mahlzeit">${MEALS.map(([m,l])=>`<button data-act="emeal" data-meal="${m}" class="${E.meal===m?'on':''}">${l}</button>`).join('')}</div>
    <div class="row"><label for="eTime" class="small muted" style="white-space:nowrap">Gegessen um</label><input id="eTime" type="time" value="${E.time}" style="max-width:130px"></div>
    <div class="card"><div class="row" style="justify-content:space-between;align-items:baseline"><b class="num" style="font-family:var(--display);font-size:26px" id="eK">${Math.round(n[0])} kcal</b><span class="pfc" id="eM">E ${fmt(n[1])} g · K ${fmt(n[2])} g · F ${fmt(n[4])} g</span></div></div>
+   <details class="card enut" id="eNutD"${E.nut?' open':''}><summary><b>Vitamine & Nährstoffe</b><span class="tiny muted">für ${fmt(E.amt)} ${esc(e.unit)}</span></summary><div class="stack" id="eNut" style="gap:12px;margin-top:10px">${E.nut?entryNutHtml(e,E.amt):''}</div></details>
    <button class="primary" data-act="saveedit">Speichern</button><div class="row" style="gap:8px"><button class="grow" data-act="close">Abbrechen</button><button class="grow" data-act="delentry" data-id="${e.id}" style="color:#ff6b6b">Löschen</button></div></div>`);
   const ti=document.getElementById('eTime'); ti.addEventListener('input',()=>{E.time=ti.value});
-  const inp=document.getElementById('eAmt'); inp.addEventListener('input',()=>{E.amt=parseFloat(String(inp.value).replace(',','.'))||0; const nn=editScaled(e,E.amt); document.getElementById('eK').textContent=Math.round(nn[0])+' kcal'; document.getElementById('eM').textContent=`E ${fmt(nn[1])} g · K ${fmt(nn[2])} g · F ${fmt(nn[4])} g`});
+  const nd=document.getElementById('eNutD'); const nutUpd=()=>{if(!E.nut)return; document.getElementById('eNut').innerHTML=entryNutHtml(e,E.amt); nd.querySelector('summary .tiny').textContent='für '+fmt(E.amt)+' '+e.unit};
+  nd.addEventListener('toggle',()=>{E.nut=UI.nutOpen=nd.open; nutUpd()});
+  const inp=document.getElementById('eAmt'); inp.addEventListener('input',()=>{E.amt=parseFloat(String(inp.value).replace(',','.'))||0; nutUpd(); const nn=editScaled(e,E.amt); document.getElementById('eK').textContent=Math.round(nn[0])+' kcal'; document.getElementById('eM').textContent=`E ${fmt(nn[1])} g · K ${fmt(nn[2])} g · F ${fmt(nn[4])} g`});
 }
 function saveEdit(){const E=UI.edit; const arr=S.days[UI.date]||[]; const i=arr.findIndex(x=>x.id===E.id); if(i<0){closeSheet();return}
   if(!(E.amt>0)){toast('Bitte eine Menge eingeben. Zum Entfernen „Löschen“ nehmen.');return}
@@ -2410,6 +2437,7 @@ document.addEventListener('click',async ev=>{
     case 'donemeal':UI.tab='heute';UI.q='';window.scrollTo(0,0);render();break;
     case 'glass':{const b=S.body[UI.date]=S.body[UI.date]||{}; const i=+el.dataset.i, cur=b.water||0; const nv=(i+1)*250<=cur?i*250:(i+1)*250; const before=cur; b.water=nv; if(!b.water)delete b.water; if(!Object.keys(b).length)delete S.body[UI.date]; try{Store.saveMeta()}catch(e){toast('Speichern: '+e.message)} render(); const g=drinkGoal(UI.date); if(nv>before&&nv>=g&&before<g)toast('Trinkziel geschafft!'); try{notifResched()}catch(e){} break}
     case 'details':UI.showDetails=!UI.showDetails; render(); break;
+    case 'daynut':UI.edit=null; closeSheet(); UI.showDetails=true; render(); setTimeout(()=>{const c=document.querySelector('details.card.nut'); if(c)window.scrollTo({top:c.getBoundingClientRect().top+window.scrollY-90,behavior:'smooth'})},60); break;
     case 'streak':openSheet(streakCard(streakInfo())+'<button data-act="close" style="margin-top:12px;width:100%">Schließen</button>'); break;
     case 'supp':try{suppToggle(UI.date)}catch(e){toast('Speichern: '+e.message)} render(); if(typeof notifSoon==='function')notifSoon(); break;
     case 'water':{const b=S.body[UI.date]=S.body[UI.date]||{}; b.water=Math.max(0,(b.water||0)+(+el.dataset.ml)); if(!b.water)delete b.water; if(!Object.keys(b).length)delete S.body[UI.date]; try{Store.saveMeta()}catch(e){toast('Speichern: '+e.message)} render(); const g=drinkGoal(UI.date); if(+el.dataset.ml>0&&b.water>=g&&b.water-(+el.dataset.ml)<g)toast('Trinkziel geschafft!'); else if(+el.dataset.ml>0)toast('+'+el.dataset.ml+' ml getrunken'); try{notifSoon()}catch(e){} break}
