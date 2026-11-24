@@ -97,7 +97,7 @@ html,body{overflow-x:hidden;overflow-x:clip;max-width:100%}
 .eedit{cursor:pointer;border-radius:8px}.eedit:active{background:var(--surface2)}.eedit .pen{opacity:.45;font-weight:400;font-size:12px}
 .facts .fr{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);align-items:baseline}
 .facts .fr:last-child{border-bottom:0}.facts .fr.sub{padding-left:14px;font-size:14px;color:var(--muted)}.facts .fr.sub b{color:var(--ink)}.facts .fr b{white-space:nowrap}
-details.why>summary{cursor:pointer;font-size:12px;color:var(--accent,#c6f24e);list-style:none;margin-top:2px}details.why>summary::-webkit-details-marker{display:none}details.why>summary::before{content:"▸ "}details.why[open]>summary::before{content:"▾ "}.whyb{font-size:13px;line-height:1.45;background:var(--surface2);border-radius:12px;padding:8px 12px;margin-top:6px}.whyb p{margin:6px 0 2px}.whyb ul{margin:0 0 4px;padding-left:18px}.whyb li{margin:2px 0}
+details.why>summary{cursor:pointer;font-size:12px;color:var(--accent,#c6f24e);list-style:none;margin-top:2px}details.why>summary::-webkit-details-marker{display:none}details.why>summary::before{content:"▸ "}details.why[open]>summary::before{content:"▾ "}.whyb{font-size:13px;line-height:1.45;background:var(--surface2);border-radius:12px;padding:8px 12px;margin-top:6px}.whyb p{margin:6px 0 2px}.whyb ul{margin:0 0 4px;padding-left:18px}.whyb li{margin:2px 0}.bw{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:12px;line-height:1.4;margin-top:4px;padding:6px 10px;background:var(--surface2);border-radius:10px}.bw .bwl{font-weight:700;font-size:11px}.bw .bwl.g{color:var(--good)}.bw .bwl.b{color:var(--low)}.bw .bwr{display:flex;gap:6px;min-width:0}.bw .bwr span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bw .bwr i{font-style:normal;color:var(--muted);white-space:nowrap}
 details.nut>summary{display:flex;justify-content:space-between;align-items:center;cursor:pointer;list-style:none}details.nut>summary::-webkit-details-marker{display:none}
 details.nut>summary h2::after{content:" ▾";font-size:.7em;color:var(--muted)}details.nut:not([open])>summary h2::after{content:" ▸"}
 .ampel{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.amp{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:4px 8px;border-radius:99px;background:var(--surface2)}.amp i{width:8px;height:8px;border-radius:50%}.amp b{font-weight:700}.amp.good i{background:var(--good)}.amp.warn i{background:var(--warn)}.amp.low i{background:var(--low)}
@@ -551,6 +551,10 @@ const NUT_TIP={bcar:'Karotten, Süßkartoffel, Spinat, Grünkohl, Paprika',mg:'H
 const NUT_LESS={sat:'weniger Butter, Sahne, fettes Fleisch, Wurst, Käse und Gebäck',fat:'weniger Frittiertes und fette Soßen',kcal:'Das kommt einfach von der großen Essensmenge, für Muskelaufbau ist das in Ordnung.',carb:'Weißmehl und Zucker durch Vollkorn ersetzen',chol:'weniger Eigelb, Wurst und Innereien',b12:'kommt von Fleisch/Milch und ist kein Problem',fe:'kein Grund zur Sorge',prot:'kein Grund zur Sorge, Eiweiß brauchst du'};
 const AA_TIP={lys:'Milchprodukte, Fleisch, Fisch, Eier, Bohnen/Linsen',metcys:'Eier, Fisch, Hähnchen, Haferflocken, Nüsse',trp:'Milch, Haferflocken, Kerne, Hähnchen',thr:'Fleisch, Fisch, Milch, Linsen',his:'Fleisch, Fisch, Milchprodukte',ile:'Fleisch, Fisch, Eier, Milch',leu:'Milchprodukte, Fleisch, Eier',val:'Milchprodukte, Fleisch, Eier',phetyr:'Milchprodukte, Fleisch, Eier, Nüsse'};
 function idxRow(title,valHtml,hint,pct,color,div,why){return `<div class="stack" style="gap:4px"><div class="row" style="justify-content:space-between;align-items:baseline"><span>${title}</span>${valHtml}</div>${pct!=null?(typeof div==='string'?div:div?divScale(pct,color):bar(pct,color)):''}<div class="tiny muted">${hint}</div>${why||''}</div>`}
+/* Immer sichtbar: die besten und schlechtesten Einträge von heute für einen Qualitätswert */
+function bestWorst(good,bad,opt={}){if(!good.length&&!bad.length)return '';
+  const col=(l,cls,lab)=>`<div style="min-width:0"><div class="bwl ${cls}">${lab}</div>${l.length?l.slice(0,3).map(o=>`<div class="bwr"><span title="${esc(o.name)}">${esc(o.name)}</span><i>${o.v}</i></div>`).join(''):'<div class="bwr"><i>nichts Auffälliges</i></div>'}</div>`;
+  return `<div class="bw">${col(good,'g',opt.gl||'👍 Heute gut')}${col(bad,'b',opt.bl||'👎 Heute schlecht')}</div>`}
 /* Aufklappbare Begründung unter einem Qualitätswert */
 function whyBox(key,parts){const body=parts.filter(Boolean).join(''); if(!body)return '';
   return `<details class="why" data-why="${key}"${UI.whyOpen&&UI.whyOpen[key]?' open':''}><summary>Warum ist der Wert so?</summary><div class="whyb">${body}</div></details>`}
@@ -568,7 +572,7 @@ function indicesCard(entries,t){const x=dayIndices(entries,t); if(!entries.lengt
   /* GI */
   let giWhy='';
   if(x.gi!=null){const L=x.giList||[]; const hi=L.filter(o=>o.gi>Math.max(55,x.gi)).sort((a,b)=>b.gi*b.ch-a.gi*a.ch).slice(0,3), lo=L.filter(o=>o.gi<Math.min(55,x.gi)).sort((a,b)=>b.ch-a.ch).slice(0,3);
-    giWhy=whyBox('gi',[whyP('Was ist das?','Der GI sagt, wie schnell Kohlenhydrate deinen Blutzucker steigen lassen. Traubenzucker hat 100. Hier ist es der Durchschnitt über alles, was du heute gegessen hast: Lebensmittel mit vielen Kohlenhydraten zählen stärker.'),
+    giWhy=bestWorst(L.filter(o=>o.gi<55).sort((a,b)=>b.ch-a.ch).map(o=>({name:o.name,v:'GI '+g0(o.gi)})),L.filter(o=>o.gi>=70).sort((a,b)=>b.gi*b.ch-a.gi*a.ch).map(o=>({name:o.name,v:'GI '+g0(o.gi)})))+whyBox('gi',[whyP('Was ist das?','Der GI sagt, wie schnell Kohlenhydrate deinen Blutzucker steigen lassen. Traubenzucker hat 100. Hier ist es der Durchschnitt über alles, was du heute gegessen hast: Lebensmittel mit vielen Kohlenhydraten zählen stärker.'),
       whyL('Treibt hoch:',hi.map(o=>`${nm(o.name)}: GI ${g0(o.gi)}, ${g0(o.ch)} g Kohlenhydrate`)),
       whyL('Senkt:',lo.map(o=>`${nm(o.name)}: GI ${g0(o.gi)}, ${g0(o.ch)} g Kohlenhydrate`)),
       x.noGi&&x.noGi.length?whyP('Ohne GI-Wert, darum nicht mitgezählt:',x.noGi.slice(0,4).map(o=>nm(o.name)).join(', ')+'.'):'',
@@ -576,13 +580,15 @@ function indicesCard(entries,t){const x=dayIndices(entries,t); if(!entries.lengt
   /* GL */
   let glWhy='';
   if(x.gl!=null){const L=(x.giList||[]).slice().sort((a,b)=>b.gl-a.gl).slice(0,4);
-    glWhy=whyBox('gl',[whyP('Was ist das?','Die glykämische Last ist GI mal Menge: Sie zeigt, wie stark dein Blutzucker heute insgesamt belastet wird. Viel essen heißt also auch mehr Last. Für Muskelaufbau mit vielen Kohlenhydraten ist ein mittlerer Wert normal.'),
+    const glGood=(x.giList||[]).filter(o=>o.ch>=10&&o.gi<55).sort((a,b)=>b.ch-a.ch).map(o=>({name:o.name,v:g0(o.gl)}));
+    const glBad=L.filter(o=>o.gl>=10);
+    glWhy=bestWorst(glGood.filter(o=>!glBad.some(q=>q.name===o.name)),glBad.map(o=>({name:o.name,v:g0(o.gl)})))+whyBox('gl',[whyP('Was ist das?','Die glykämische Last ist GI mal Menge: Sie zeigt, wie stark dein Blutzucker heute insgesamt belastet wird. Viel essen heißt also auch mehr Last. Für Muskelaufbau mit vielen Kohlenhydraten ist ein mittlerer Wert normal.'),
       whyL('Am meisten Last bringen:',L.map(o=>`${nm(o.name)}: ${g0(o.gl)} (${g0(o.ch)} g Kohlenhydrate, GI ${g0(o.gi)})`)),
       x.gl>=80?whyP('Was hilft:','Nicht weniger essen, sondern tauschen: Vollkorn, Haferflocken, Hülsenfrüchte und Kartoffeln mit Schale statt Weißbrot, Süßem und Säften.'):''])}
   /* Proteinqualität */
   let aasWhy='';
   if(x.aas!=null){const L=x.protList||[]; const weak=x.aas<100?L.filter(o=>o.limScore<100).sort((a,b)=>b.prot-a.prot).slice(0,3):[];
-    aasWhy=whyBox('aas',[whyP('Was ist das?','Eiweiß besteht aus Bausteinen (Aminosäuren). Neun davon kann der Körper nicht selbst bauen. 100 % heißt: Von jedem dieser neun Bausteine ist genug im Eiweiß drin. Über 100 % ist gut, bringt aber nichts extra. Wie viel Eiweiß du insgesamt isst, ist für Muskeln noch wichtiger.'),
+    aasWhy=bestWorst(L.filter(o=>o.score>=100&&o.prot>=3).map(o=>({name:o.name,v:Math.min(999,Math.round(o.score))+' %'})),L.filter(o=>o.score<100&&o.prot>=2).sort((a,b)=>a.score-b.score).map(o=>({name:o.name,v:Math.round(o.score)+' %'})))+whyBox('aas',[whyP('Was ist das?','Eiweiß besteht aus Bausteinen (Aminosäuren). Neun davon kann der Körper nicht selbst bauen. 100 % heißt: Von jedem dieser neun Bausteine ist genug im Eiweiß drin. Über 100 % ist gut, bringt aber nichts extra. Wie viel Eiweiß du insgesamt isst, ist für Muskeln noch wichtiger.'),
       whyL('Dein Eiweiß kommt vor allem aus:',L.slice(0,4).map(o=>`${nm(o.name)}: ${g0(o.prot)} g Eiweiß, Qualität ${Math.min(999,Math.round(o.score))} %`)),
       weak.length?whyL(`Wenig ${x.aasLim} haben:`,weak.map(o=>`${nm(o.name)} (${Math.round(o.limScore)} %)`)):'',
       x.aas<100?whyP('Was hilft:',`Mehr ${x.aasLim} gibt es in ${AA_TIP[x.aasLimK]||'Milchprodukten, Fleisch, Eiern'}. Mischen hilft auch: Brot mit Käse, Reis mit Bohnen, Kartoffeln mit Ei.`):whyP('','Passt. Die Mischung deiner Eiweißquellen deckt alle Bausteine.'),
@@ -595,7 +601,7 @@ function indicesCard(entries,t){const x=dayIndices(entries,t); if(!entries.lengt
     const fUp=(x.diiFoods||[]).filter(o=>o.d>0.05).slice(0,3), fDn=(x.diiFoods||[]).filter(o=>o.d<-0.05).reverse().slice(0,3);
     const sum=s=>s.reduce((a,p)=>a+p[1],0);
     diiShort=up.length?' Treibt hoch: '+up.slice(0,2).map(lab).join(', ')+'.':'';
-    diiWhy=whyBox('dii',[whyP('Was ist das?','Gemeint ist keine Wunde, sondern eine stille, dauerhafte Entzündung im Körper. Der Wert schätzt, ob dein Essen sie eher fördert (Plus) oder bremst (Minus). Gemüse, Obst, Vollkorn, Nüsse, Fisch, Tee und Gewürze bremsen sie. Viel gesättigtes Fett, Weißmehl, Zucker und sehr viel Essen fördern sie.'),
+    diiWhy=bestWorst(fDn.map(o=>({name:o.name,v:'−'+fmt(Math.round(-o.d*10)/10)})),fUp.map(o=>({name:o.name,v:'+'+fmt(Math.round(o.d*10)/10)})))+whyBox('dii',[whyP('Was ist das?','Gemeint ist keine Wunde, sondern eine stille, dauerhafte Entzündung im Körper. Der Wert schätzt, ob dein Essen sie eher fördert (Plus) oder bremst (Minus). Gemüse, Obst, Vollkorn, Nüsse, Fisch, Tee und Gewürze bremsen sie. Viel gesättigtes Fett, Weißmehl, Zucker und sehr viel Essen fördern sie.'),
       whyP('Wie wird gerechnet?','Für 26 Nährstoffe und 5 Lebensmittel wird deine Tagesmenge mit einem durchschnittlichen Tag verglichen. Wenig von etwas Gutem zählt also genauso ins Plus wie viel von etwas Ungünstigem.'),
       upMiss.length?whyL(`Dein Plus kommt vor allem von dem, was fehlt (zusammen +${fmt(Math.round(sum(up.filter(p=>p[2]<0))*10)/10)}):`,upMiss.map(p=>`wenig ${N(p[0])}${NUT_TIP[p[0]]?` <span class="muted">· ${p[0].startsWith('food:')?'z. B. '+NUT_TIP[p[0]]:'steckt z. B. in '+NUT_TIP[p[0]]}</span>`:''}`)):'',
       upMuch.length?whyL(`Zu viel davon (zusammen +${fmt(Math.round(sum(up.filter(p=>p[2]>=0))*10)/10)}):`,upMuch.map(p=>`viel ${N(p[0])}${NUT_LESS[p[0]]?` <span class="muted">· ${NUT_LESS[p[0]]}</span>`:''}`)):'',
@@ -608,7 +614,8 @@ function indicesCard(entries,t){const x=dayIndices(entries,t); if(!entries.lengt
   /* ORAC */
   let oracWhy='';
   if(x.orac!=null){const L=(x.oracList||[]).slice(0,4);
-    oracWhy=whyBox('orac',[whyP('Was ist das?','ORAC misst im Reagenzglas, wie stark ein Lebensmittel sogenannte freie Radikale abfängt (Antioxidantien). Höher ist besser, aber im Körper wirkt das viel schwächer. Als grober Hinweis auf bunte Pflanzenkost taugt es trotzdem.'),
+    const oN=new Set((x.oracList||[]).map(o=>o.name)); const oNone=byName(entries.filter(e=>!oN.has(e.name)&&(e.n[0]||0)>=100).map(e=>({name:e.name,k:e.n[0]||0})),['k']).sort((a,b)=>b.k-a.k).map(o=>({name:o.name,v:Math.round(o.k)+' kcal'}));
+    oracWhy=bestWorst(L.map(o=>({name:o.name,v:Math.round(o.o).toLocaleString('de-DE')})),oNone,{bl:'➖ Kaum welche'})+whyBox('orac',[whyP('Was ist das?','ORAC misst im Reagenzglas, wie stark ein Lebensmittel sogenannte freie Radikale abfängt (Antioxidantien). Höher ist besser, aber im Körper wirkt das viel schwächer. Als grober Hinweis auf bunte Pflanzenkost taugt es trotzdem.'),
       whyL('Am meisten bringen:',L.map(o=>`${nm(o.name)}: ${Math.round(o.o).toLocaleString('de-DE')}`)),
       whyP('Was hilft:','Beeren, Nüsse, Kakao oder dunkle Schokolade, Äpfel, Tee und Gewürze wie Zimt, Kurkuma und Oregano.')])}
   return `<section class="card stack" style="gap:14px"><div class="row" style="justify-content:space-between"><h2>Qualität</h2><span class="tiny muted">heute</span></div>
