@@ -563,6 +563,7 @@ const whyL=(label,items)=>items.length?`<p><b>${label}</b></p><ul>${items.map(s=
 function indicesCard(entries,t){const x=dayIndices(entries,t); if(!entries.length)return '';
   const giC=x.gi==null?'':x.gi<=55?'var(--good)':x.gi<70?'var(--warn)':'var(--low)';
   const glC=x.gl==null?'':x.gl<80?'var(--good)':x.gl<=120?'var(--warn)':'var(--low)';
+  const oracC=x.orac==null?'':x.orac<3000?'var(--low)':x.orac<5000?'var(--warn)':'var(--good)';
   const diiTxt=x.dii==null?'':x.dii<=-1?'entzündungshemmend':x.dii<1?'neutral':'eher entzündungsfördernd';
   const diiC=x.dii==null?'':x.dii<=-1?'var(--good)':x.dii<1?'var(--warn)':'var(--low)';
   const N=k=>k.startsWith('food:')?DII_FOODN[k.slice(5)]:NI[k]?NI[k][0]:k;
@@ -615,7 +616,9 @@ function indicesCard(entries,t){const x=dayIndices(entries,t); if(!entries.lengt
   let oracWhy='';
   if(x.orac!=null){const L=(x.oracList||[]).slice(0,4);
     const oN=new Set((x.oracList||[]).map(o=>o.name)); const oNone=byName(entries.filter(e=>!oN.has(e.name)&&(e.n[0]||0)>=100).map(e=>({name:e.name,k:e.n[0]||0})),['k']).sort((a,b)=>b.k-a.k).map(o=>({name:o.name,v:Math.round(o.k)+' kcal'}));
+    const oracZ=x.orac<3000?'Unter 3.000 ist wenig: Heute war kaum Obst, Gemüse, Nüsse oder Kakao dabei.':x.orac<5000?'Zwischen 3.000 und 5.000 ist mittel. Ein Stück Obst oder eine Handvoll Nüsse bringt dich in den guten Bereich.':'Ab 5.000 ist gut. Oft genannt wird als Ziel 3.000 bis 5.000 pro Tag. Mehr schadet nicht.';
     oracWhy=bestWorst(L.map(o=>({name:o.name,v:Math.round(o.o).toLocaleString('de-DE')})),oNone,{bl:'➖ Kaum welche'})+whyBox('orac',[whyP('Was ist das?','ORAC misst im Reagenzglas, wie stark ein Lebensmittel sogenannte freie Radikale abfängt (Antioxidantien). Höher ist besser, aber im Körper wirkt das viel schwächer. Als grober Hinweis auf bunte Pflanzenkost taugt es trotzdem.'),
+      whyP('Ist mein Wert gut?',oracZ),
       whyL('Am meisten bringen:',L.map(o=>`${nm(o.name)}: ${Math.round(o.o).toLocaleString('de-DE')}`)),
       whyP('Was hilft:','Beeren, Nüsse, Kakao oder dunkle Schokolade, Äpfel, Tee und Gewürze wie Zimt, Kurkuma und Oregano.')])}
   return `<section class="card stack" style="gap:14px"><div class="row" style="justify-content:space-between"><h2>Qualität</h2><span class="tiny muted">heute</span></div>
@@ -623,7 +626,7 @@ function indicesCard(entries,t){const x=dayIndices(entries,t); if(!entries.lengt
    ${x.gl!=null?idxRow('Glykämische Last',`<b class="num" style="color:${glC}">${Math.round(x.gl)}</b>`,`${x.gl<80?'niedrig':x.gl<=120?'mittel':'hoch'} (unter 80 niedrig, über 120 hoch)${x.giCov<0.9?' · GI bekannt für '+Math.round(x.giCov*100)+' % der Kohlenhydrate':''}`,0,glC,zoneScale(x.gl,200,80,120,glC),glWhy):''}
    ${x.aas!=null?idxRow('Proteinqualität',`<b class="num" style="color:${x.aas>=100?'var(--good)':x.aas>=75?'var(--warn)':'var(--low)'}">${Math.min(999,Math.round(x.aas))} %</b>`,`Wie gut dein Eiweiß alle unentbehrlichen Bausteine deckt (Aminosäure-Score, ähnlich der biologischen Wertigkeit). ${x.aas>=100?'Alles gedeckt.':'Am knappsten: '+x.aasLim+'.'}`,Math.min(100,x.aas),x.aas>=100?'var(--good)':x.aas>=75?'var(--warn)':'var(--low)',false,aasWhy):idxRow('Proteinqualität','<span class="muted">–</span>','Braucht Lebensmittel mit Aminosäure-Daten (BLS oder USDA).')}
    ${x.dii!=null?idxRow('Entzündungsindex (DII)',`<b class="num" style="color:${diiC}">${x.dii>0?'+':''}${fmt(Math.round(x.dii*10)/10)}</b>`,`${diiTxt}. Skala etwa −8 (bremst Entzündungen) bis +8 (fördert sie).${diiShort}${early?' Tagsüber noch vorläufig.':''}`,(Math.max(-8,Math.min(8,x.dii))+8)/16*100,diiC,true,diiWhy):''}
-   ${x.orac!=null?idxRow('ORAC (Antioxidantien)',`<b class="num">${Math.round(x.orac).toLocaleString('de-DE')}</b>`,'µmol TE, grob geschätzt aus alten USDA-Werten. Nur zur Orientierung.',null,null,null,oracWhy):idxRow('ORAC (Antioxidantien)','<span class="muted">–</span>','Kein Lebensmittel mit ORAC-Richtwert eingetragen (z. B. Beeren, Nüsse, Gewürze, Kakao).')}
+   ${x.orac!=null?idxRow('ORAC (Antioxidantien)',`<b class="num" style="color:${oracC}">${Math.round(x.orac).toLocaleString('de-DE')}</b>`,`${x.orac<3000?'wenig':x.orac<5000?'mittel':'gut'} (unter 3.000 wenig, ab 5.000 gut). µmol TE, grob geschätzt aus alten USDA-Werten. Nur zur Orientierung.${early&&x.orac<5000?' Tagsüber noch vorläufig.':''}`,0,oracC,zoneScale(x.orac,12000,3000,5000,oracC,true),oracWhy):idxRow('ORAC (Antioxidantien)','<span class="muted">–</span>','Kein Lebensmittel mit ORAC-Richtwert eingetragen (z. B. Beeren, Nüsse, Gewürze, Kakao).')}
   </section>`}
 /* Nährwertangaben wie auf der Packung (Big 8 + Fettqualität) */
 function factsCard(entries,t){if(!entries.length)return ''; const kc=t[0]||1; const pe=(g,f)=>g*f/kc*100;
@@ -886,9 +889,11 @@ function scaleBar(stops,ticks,pct,color,labels){const x=Math.min(98,Math.max(2,p
 const scLab=(x,t)=>`<span style="position:absolute;white-space:nowrap;left:${x}%;transform:translateX(${x<=0?'0':x>=100?'-100%':'-50%'})">${t}</span>`;
 function divScale(p,color){return scaleBar('var(--good),color-mix(in srgb,var(--good) 25%,var(--warn)) 40%,var(--warn) 50%,color-mix(in srgb,var(--low) 40%,var(--warn)) 60%,var(--low)',[50],p,color,scLab(0,'hemmend −8')+scLab(50,'0')+scLab(100,'+8 fördernd'))}
 /* Drei Zonen (niedrig/mittel/hoch) mit Grenzen a und b auf einer Skala von 0 bis max */
-function zoneScale(v,max,a,b,color){const p=x=>Math.min(100,Math.max(0,x/max*100)), pa=p(a), pb=p(b), r=n=>Math.round(n*10)/10;
-  const stops=`var(--good),var(--good) ${r(pa*0.6)}%,color-mix(in srgb,var(--good) 30%,var(--warn)) ${r(pa)}%,var(--warn) ${r((pa+pb)/2)}%,color-mix(in srgb,var(--low) 45%,var(--warn)) ${r(pb)}%,var(--low) ${r(pb+(100-pb)*0.4)}%,var(--low)`;
-  return scaleBar(stops,[pa,pb],p(v),color,scLab(0,'niedrig')+scLab(pa,a)+scLab(pb,b)+scLab(100,'hoch'))}
+/* rev: umgekehrt, wenig = schlecht (rot), viel = gut (grün), z. B. ORAC */
+function zoneScale(v,max,a,b,color,rev){const p=x=>Math.min(100,Math.max(0,x/max*100)), pa=p(a), pb=p(b), r=n=>Math.round(n*10)/10;
+  const G=rev?'var(--low)':'var(--good)', L=rev?'var(--good)':'var(--low)', f=n=>rev?n.toLocaleString('de-DE'):n;
+  const stops=`${G},${G} ${r(pa*0.6)}%,color-mix(in srgb,${G} 30%,var(--warn)) ${r(pa)}%,var(--warn) ${r((pa+pb)/2)}%,color-mix(in srgb,${L} 45%,var(--warn)) ${r(pb)}%,${L} ${r(pb+(100-pb)*0.4)}%,${L}`;
+  return scaleBar(stops,[pa,pb],p(v),color,scLab(0,rev?'wenig':'niedrig')+scLab(pa,f(a))+scLab(pb,f(b))+scLab(100,rev?'viel':'hoch'))}
 function bar(p,color){return `<div class="progress"><i style="width:${Math.min(100,Math.max(0,p))}%;background:${color}"></i></div>`}
 function microColor(p){return p>=100?'var(--good)':p>=60?'var(--warn)':'var(--low)'}
 
